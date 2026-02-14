@@ -42,7 +42,6 @@ appsettings.*.json
 
 ## Node.js
 node_modules/
-package-lock.json
 
 ## Rust
 target/
