@@ -43,11 +43,19 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "Verba-Windows"
-          Copy-Item "src-tauri/target/release/Verba.exe" "Verba-Windows/"
+          # Find the app exe (could be Verba.exe or mercer-voice.exe)
+          $exes = Get-ChildItem "src-tauri/target/release/*.exe" -File | Where-Object { $_.Name -notmatch "^(build-script|vc)"}
+          Write-Host "Found executables:" $exes.Name
+          foreach ($exe in $exes) {
+            Copy-Item $exe.FullName "Verba-Windows/"
+          }
           # Copy any DLLs the app needs from the release dir
-          Get-ChildItem "src-tauri/target/release/*.dll" | ForEach-Object {
+          Get-ChildItem "src-tauri/target/release/*.dll" -File | ForEach-Object {
+            Write-Host "Copying DLL:" $_.Name
             Copy-Item $_.FullName "Verba-Windows/"
           }
+          Write-Host "Portable folder contents:"
+          Get-ChildItem "Verba-Windows/"
 
       - name: Upload portable folder
         uses: actions/upload-artifact@v4
