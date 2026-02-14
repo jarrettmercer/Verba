@@ -1,0 +1,176 @@
+/* Blazor error UI */
+#blazor-error-ui {
+    background: var(--color-error);
+    color: white;
+    padding: 0.5rem 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    display: none;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+/* ===== PILL OVERLAY ===== */
+.pill-overlay {
+    width: var(--pill-width);
+    height: var(--pill-height);
+    border-radius: var(--pill-border-radius);
+    background: var(--pill-bg);
+    border: 1px solid var(--pill-border);
+    backdrop-filter: blur(var(--pill-backdrop-blur));
+    -webkit-backdrop-filter: blur(var(--pill-backdrop-blur));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+.pill-overlay.state-recording {
+    background: var(--pill-bg-recording);
+    border-color: rgba(217, 119, 6, 0.3);
+}
+
+.pill-overlay.state-transcribing {
+    border-color: rgba(217, 119, 6, 0.2);
+}
+
+.pill-overlay.state-typing {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.pill-overlay.state-error {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ===== IDLE ===== */
+.pill-idle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.6;
+}
+
+.pill-mic-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--colors--gray-color);
+}
+
+.pill-label {
+    font-size: var(--font-size--text-sm);
+    color: var(--colors--white);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ===== RECORDING ===== */
+.pill-recording {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.recording-indicator {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    border-radius: 50%;
+    background-color: var(--color-recording);
+    animation: recording-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.75); }
+}
+
+#waveformCanvas {
+    flex: 1;
+    height: 40px;
+}
+
+.pill-duration {
+    font-size: var(--font-size--text-xs);
+    color: var(--colors--gray-color);
+    font-variant-numeric: tabular-nums;
+    min-width: 30px;
+    text-align: right;
+}
+
+/* ===== TRANSCRIBING ===== */
+.pill-transcribing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.transcribing-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.transcribing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--amber-2);
+    animation: dot-bounce 1.4s ease-in-out infinite;
+}
+
+.transcribing-dots span:nth-child(2) {
+    animation-delay: 0.16s;
+}
+
+.transcribing-dots span:nth-child(3) {
+    animation-delay: 0.32s;
+}
+
+@keyframes dot-bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== TYPING (DONE) ===== */
+.pill-typing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pill-check-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--color-success);
+}
+
+/* ===== ERROR ===== */
+.pill-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pill-error-badge {
+    color: var(--color-error);
+    font-weight: 700;
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--color-error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

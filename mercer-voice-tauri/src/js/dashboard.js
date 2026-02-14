@@ -1,0 +1,397 @@
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+
+// ===== TAB NAVIGATION =====
+const navButtons = document.querySelectorAll('.nav-btn');
+const tabPanels = document.querySelectorAll('.tab-panel');
+
+navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        navButtons.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    });
+});
+
+// ===== STATS =====
+async function loadStats() {
+    try {
+        const stats = await invoke('get_stats');
+        document.getElementById('stat-dictations').textContent = stats.total_dictations.toLocaleString();
+        document.getElementById('stat-words').textContent = stats.total_words.toLocaleString();
+
+        // Time saved: assume typing speed 40 WPM, dictation is ~3x faster
+        const minutesSaved = Math.round((stats.total_words / 40) * 0.66);
+        if (minutesSaved >= 60) {
+            const hours = Math.floor(minutesSaved / 60);
+            const mins = minutesSaved % 60;
+            document.getElementById('stat-time-saved').textContent = `${hours}h ${mins}m`;
+        } else {
+            document.getElementById('stat-time-saved').textContent = `${minutesSaved}m`;
+        }
+
+        const avg = stats.total_dictations > 0
+            ? Math.round(stats.total_words / stats.total_dictations)
+            : 0;
+        document.getElementById('stat-avg-length').textContent = avg.toLocaleString();
+
+        renderRecentActivity(stats.history || []);
+    } catch (err) {
+        console.error('Failed to load stats:', err);
+    }
+}
+
+function renderRecentActivity(history) {
+    const container = document.getElementById('recent-activity');
+    const recent = history.slice(-8).reverse();
+
+    if (recent.length === 0) {
+        container.innerHTML = '<div class="empty-state">No dictations yet. Start talking!</div>';
+        return;
+    }
+
+    container.innerHTML = recent.map(entry => {
+        const words = entry.text.split(/\s+/).filter(w => w.length > 0).length;
+        const time = formatTimeAgo(entry.timestamp);
+        const truncated = entry.text.length > 80 ? entry.text.slice(0, 80) + '...' : entry.text;
+        return `
+            <div class="activity-item">
+                <span class="activity-text">${escapeHtml(truncated)}</span>
+                <span class="activity-words">${words} words</span>
+                <span class="activity-meta">${time}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// ===== DICTIONARY =====
+let dictEntries = [];
+let editingId = null;
+
+async function loadDictionary() {
+    try {
+        dictEntries = await invoke('get_dictionary');
+        renderDictionary();
+    } catch (err) {
+        console.error('Failed to load dictionary:', err);
+    }
+}
+
+function renderDictionary(filter = '') {
+    const container = document.getElementById('dict-list');
+    const filtered = filter
+        ? dictEntries.filter(e =>
+            e.phrase.toLowerCase().includes(filter) ||
+            (e.replacement || '').toLowerCase().includes(filter))
+        : dictEntries;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">No dictionary entries yet. Add custom words and replacements.</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(entry => {
+        const typeClass = entry.entry_type || 'custom';
+        const typeLabel = typeClass === 'replacement' ? 'Replace' : typeClass === 'blocked' ? 'Block' : 'Custom';
+        const hasReplacement = entry.entry_type === 'replacement' && entry.replacement;
+
+        return `
+            <div class="dict-entry" data-id="${escapeHtml(entry.id)}">
+                <span class="dict-phrase">${escapeHtml(entry.phrase)}</span>
+                ${hasReplacement ? `
+                    <span class="dict-arrow">&rarr;</span>
+                    <span class="dict-replacement-text">${escapeHtml(entry.replacement)}</span>
+                ` : '<span style="flex:1"></span>'}
+                <span class="dict-type-badge ${typeClass}">${typeLabel}</span>
+                <div class="dict-actions">
+                    <button class="dict-action-btn edit" title="Edit" onclick="editEntry('${escapeHtml(entry.id)}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                        </svg>
+                    </button>
+                    <button class="dict-action-btn delete" title="Delete" onclick="deleteEntry('${escapeHtml(entry.id)}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Dictionary form handling
+const dictForm = document.getElementById('dict-form');
+const btnAddWord = document.getElementById('btn-add-word');
+const btnCancelWord = document.getElementById('btn-cancel-word');
+const btnSaveWord = document.getElementById('btn-save-word');
+const dictSearch = document.getElementById('dict-search');
+
+btnAddWord.addEventListener('click', () => {
+    editingId = null;
+    document.getElementById('dict-phrase').value = '';
+    document.getElementById('dict-replacement').value = '';
+    document.getElementById('dict-type').value = 'custom';
+    dictForm.style.display = 'block';
+    document.getElementById('dict-phrase').focus();
+});
+
+btnCancelWord.addEventListener('click', () => {
+    dictForm.style.display = 'none';
+    editingId = null;
+});
+
+btnSaveWord.addEventListener('click', async () => {
+    const phrase = document.getElementById('dict-phrase').value.trim();
+    const replacement = document.getElementById('dict-replacement').value.trim();
+    const entryType = document.getElementById('dict-type').value;
+
+    if (!phrase) return;
+
+    try {
+        if (editingId) {
+            await invoke('update_dictionary_entry', {
+                id: editingId,
+                phrase,
+                replacement: replacement || null,
+                entryType,
+            });
+        } else {
+            await invoke('add_dictionary_entry', {
+                phrase,
+                replacement: replacement || null,
+                entryType,
+            });
+        }
+
+        dictForm.style.display = 'none';
+        editingId = null;
+        await loadDictionary();
+    } catch (err) {
+        console.error('Failed to save dictionary entry:', err);
+    }
+});
+
+dictSearch.addEventListener('input', () => {
+    renderDictionary(dictSearch.value.toLowerCase());
+});
+
+window.editEntry = function(id) {
+    const entry = dictEntries.find(e => e.id === id);
+    if (!entry) return;
+
+    editingId = id;
+    document.getElementById('dict-phrase').value = entry.phrase;
+    document.getElementById('dict-replacement').value = entry.replacement || '';
+    document.getElementById('dict-type').value = entry.entry_type || 'custom';
+    dictForm.style.display = 'block';
+    document.getElementById('dict-phrase').focus();
+};
+
+window.deleteEntry = async function(id) {
+    try {
+        await invoke('remove_dictionary_entry', { id });
+        await loadDictionary();
+    } catch (err) {
+        console.error('Failed to delete entry:', err);
+    }
+};
+
+// ===== HISTORY =====
+let historyEntries = [];
+
+async function loadHistory() {
+    try {
+        const stats = await invoke('get_stats');
+        historyEntries = (stats.history || []).slice().reverse();
+        renderHistory();
+    } catch (err) {
+        console.error('Failed to load history:', err);
+    }
+}
+
+function renderHistory(filter = '') {
+    const container = document.getElementById('history-list');
+    const filtered = filter
+        ? historyEntries.filter(e => e.text.toLowerCase().includes(filter))
+        : historyEntries;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">No history yet. Your dictations will appear here.</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map((entry, i) => {
+        const words = entry.text.split(/\s+/).filter(w => w.length > 0).length;
+        const time = formatTimeAgo(entry.timestamp);
+        return `
+            <div class="history-item">
+                <div class="history-text">${escapeHtml(entry.text)}</div>
+                <div class="history-meta">
+                    <span class="history-time">${time}</span>
+                    <span class="history-word-count">${words} words</span>
+                </div>
+                <button class="history-copy-btn" title="Copy to clipboard" onclick="copyHistoryText(${i})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+const historySearch = document.getElementById('history-search');
+historySearch.addEventListener('input', () => {
+    renderHistory(historySearch.value.toLowerCase());
+});
+
+document.getElementById('btn-clear-history').addEventListener('click', async () => {
+    try {
+        await invoke('clear_history');
+        historyEntries = [];
+        renderHistory();
+        await loadStats();
+    } catch (err) {
+        console.error('Failed to clear history:', err);
+    }
+});
+
+window.copyHistoryText = async function(index) {
+    const entry = historyEntries[index];
+    if (!entry) return;
+    try {
+        await navigator.clipboard.writeText(entry.text);
+    } catch (_) {
+        // Fallback: invoke Rust to copy
+        try {
+            await invoke('paste_text', { text: entry.text, targetBundleId: null });
+        } catch (e) {
+            console.error('Failed to copy:', e);
+        }
+    }
+};
+
+// ===== SETTINGS =====
+// Settings are local for now — could be persisted in the store later
+const settingSounds = document.getElementById('setting-sounds');
+const settingAutoPaste = document.getElementById('setting-auto-paste');
+const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
+
+async function loadSettings() {
+    try {
+        const settings = await invoke('get_settings');
+        settingSounds.checked = settings.sounds_enabled !== false;
+        settingAutoPaste.checked = settings.auto_paste !== false;
+        settingLaunchAtLogin.checked = settings.launch_at_login === true;
+    } catch (_) {
+        // Defaults
+    }
+
+    // Detect platform for hotkey label
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    document.getElementById('hotkey-label').textContent = isMac ? 'Fn / Globe' : 'Right Ctrl';
+    document.getElementById('hotkey-description').textContent = isMac
+        ? 'Hold the Fn (Globe) key to record, release to transcribe'
+        : 'Hold the Right Ctrl key to record, release to transcribe';
+}
+
+settingSounds.addEventListener('change', () => {
+    invoke('update_setting', { key: 'sounds_enabled', value: settingSounds.checked }).catch(console.error);
+});
+
+settingAutoPaste.addEventListener('change', () => {
+    invoke('update_setting', { key: 'auto_paste', value: settingAutoPaste.checked }).catch(console.error);
+});
+
+settingLaunchAtLogin.addEventListener('change', () => {
+    invoke('update_setting', { key: 'launch_at_login', value: settingLaunchAtLogin.checked }).catch(console.error);
+});
+
+// ===== API CONFIG =====
+const apiEndpointInput = document.getElementById('setting-api-endpoint');
+const apiKeyInput = document.getElementById('setting-api-key');
+const btnToggleKey = document.getElementById('btn-toggle-key');
+const btnSaveApi = document.getElementById('btn-save-api');
+const apiStatus = document.getElementById('api-status');
+
+async function loadApiConfig() {
+    try {
+        const config = await invoke('get_api_config');
+        apiEndpointInput.value = config.endpoint || '';
+        apiKeyInput.value = config.api_key || '';
+    } catch (_) {}
+}
+
+btnToggleKey.addEventListener('click', () => {
+    const isPassword = apiKeyInput.type === 'password';
+    apiKeyInput.type = isPassword ? 'text' : 'password';
+});
+
+btnSaveApi.addEventListener('click', async () => {
+    const endpoint = apiEndpointInput.value.trim();
+    const apiKey = apiKeyInput.value.trim();
+
+    if (!endpoint || !apiKey) {
+        apiStatus.textContent = 'Both fields are required';
+        apiStatus.className = 'api-status error';
+        return;
+    }
+
+    try {
+        await invoke('set_api_config', { endpoint, apiKey: apiKey });
+        apiStatus.textContent = 'Saved successfully';
+        apiStatus.className = 'api-status success';
+        setTimeout(() => { apiStatus.textContent = ''; }, 3000);
+    } catch (err) {
+        apiStatus.textContent = 'Failed to save';
+        apiStatus.className = 'api-status error';
+        console.error('Failed to save API config:', err);
+    }
+});
+
+// ===== UTILITY =====
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const now = Date.now();
+    const ts = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime();
+    const diff = now - ts;
+
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(ts).toLocaleDateString();
+}
+
+// ===== LIVE UPDATES =====
+// Listen for stats updates from the pill window's dictation flow
+listen('stats-updated', () => {
+    loadStats();
+    loadHistory();
+});
+
+// ===== INIT =====
+async function initDashboard() {
+    await Promise.all([loadStats(), loadDictionary(), loadHistory(), loadSettings(), loadApiConfig()]);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+    initDashboard();
+}

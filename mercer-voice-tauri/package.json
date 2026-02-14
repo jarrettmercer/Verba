@@ -1,0 +1,15 @@
+{
+  "name": "verba",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "icon:strip-bg": "node scripts/strip-icon-background.js"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "sharp": "^0.33.5"
+  }
+}

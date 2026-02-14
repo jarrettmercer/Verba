@@ -1,0 +1,41 @@
+:root {
+    /* Whisper Flow–style: clean dark glass, purple accent */
+    --colors--body-bg: transparent;
+    --colors--white: #fafafa;
+    --colors--black: #0a0a0a;
+    --colors--primary: #a78bfa;
+    --colors--primary-dim: #8b5cf6;
+    --colors--transparent: transparent;
+    --colors--gray: #71717a;
+    --colors--gray-light: #a1a1aa;
+    --colors--fill: #18181b;
+    --colors--border: rgba(255, 255, 255, 0.08);
+    --colors--border-strong: rgba(255, 255, 255, 0.12);
+
+    /* Glass pill */
+    --pill-bg: rgba(18, 18, 20, 0.96);
+    --pill-bg-recording: rgba(24, 21, 38, 0.96);
+    --pill-border: rgba(255, 255, 255, 0.06);
+    --pill-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+    /* Status */
+    --color-success: #22c55e;
+    --color-error: #f87171;
+    --color-recording: #a78bfa;
+
+    /* Typography — compact like Whisper Flow */
+    --font-size--xs: 10px;
+    --font-size--sm: 12px;
+    --font-size--default: 13px;
+    --font-size--text-default: 13px;
+    --font-size--lg: 14px;
+    --font-weight--medium: 500;
+    --font-weight--semibold: 600;
+    --line-height--text-default: 1.4;
+
+    /* Pill dimensions — small overlay like Whisper Flow */
+    --pill-width: 180px;
+    --pill-height: 34px;
+    --pill-radius: 17px;
+    --pill-blur: 20px;
+}
