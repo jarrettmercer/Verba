@@ -1,6 +1,11 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
+// Platform detection — Windows needs dark bg fallback (no transparent webview)
+if (navigator.platform.indexOf('Win') >= 0 || navigator.userAgent.indexOf('Windows') >= 0) {
+    document.documentElement.classList.add('platform-windows');
+}
+
 // State machine
 const states = ['idle', 'recording', 'transcribing', 'typing', 'error'];
 let currentState = 'idle';
@@ -179,8 +184,9 @@ async function onHotkeyReleased() {
         invoke('record_dictation', { text }).catch(() => {});
 
         if (!hadTargetApp) {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
             const doneLabel = document.querySelector('.pill-typing .pill-label');
-            if (doneLabel) doneLabel.textContent = 'Copied — paste with Cmd+V';
+            if (doneLabel) doneLabel.textContent = isMac ? 'Copied — paste with Cmd+V' : 'Copied — paste with Ctrl+V';
         }
 
         // Brief "Done" display, then back to idle

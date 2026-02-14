@@ -41,7 +41,11 @@ fn do_start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<()
 
     let host = cpal::default_host();
     let device = host.default_input_device().ok_or_else(|| {
-        "No microphone found. On macOS, grant access in System Settings → Privacy & Security → Microphone for Verba.".to_string()
+        if cfg!(target_os = "windows") {
+            "No microphone found. Open Windows Settings → Privacy & Security → Microphone and make sure microphone access is turned ON, then restart Verba.".to_string()
+        } else {
+            "No microphone found. On macOS, grant access in System Settings → Privacy & Security → Microphone for Verba.".to_string()
+        }
     })?;
 
     eprintln!(
@@ -84,6 +88,22 @@ fn do_start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<()
             Arc::new(Mutex::new(Vec::with_capacity(chunk_size)));
         let chunk_buf = chunk_buffer.clone();
         let app_handle_for_callback = app_handle.clone();
+
+        // On Windows, try to open Privacy settings if microphone access seems blocked
+        #[cfg(target_os = "windows")]
+        {
+            // Check if we can actually access the device by querying supported configs
+            if device.supported_input_configs().is_err() {
+                let msg = "Microphone access is blocked. Open Windows Settings → Privacy & Security → Microphone, turn it ON, then restart Verba.";
+                eprintln!("[Verba] {}", msg);
+                emit_recording_failed(&app_handle, msg);
+                // Try to open Windows Privacy settings
+                let _ = std::process::Command::new("cmd")
+                    .args(["/C", "start", "ms-settings:privacy-microphone"])
+                    .spawn();
+                return;
+            }
+        }
 
         let stream = match device.build_input_stream(
             &config,
@@ -132,10 +152,17 @@ fn do_start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<()
         ) {
             Ok(s) => s,
             Err(e) => {
-                let msg = format!(
-                    "Microphone failed to start: {}. Grant access in System Settings → Privacy & Security → Microphone.",
-                    e
-                );
+                let msg = if cfg!(target_os = "windows") {
+                    format!(
+                        "Microphone failed to start: {}. Open Windows Settings → Privacy & Security → Microphone and make sure it's ON.",
+                        e
+                    )
+                } else {
+                    format!(
+                        "Microphone failed to start: {}. Grant access in System Settings → Privacy & Security → Microphone.",
+                        e
+                    )
+                };
                 eprintln!("[Verba] {}", msg);
                 emit_recording_failed(&app_handle, &msg);
                 return;
@@ -143,10 +170,17 @@ fn do_start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<()
         };
 
         if let Err(e) = stream.play() {
-            let msg = format!(
-                "Microphone failed to start: {}. Grant access in System Settings → Privacy & Security → Microphone.",
-                e
-            );
+            let msg = if cfg!(target_os = "windows") {
+                format!(
+                    "Microphone failed to start: {}. Open Windows Settings → Privacy & Security → Microphone and make sure it's ON.",
+                    e
+                )
+            } else {
+                format!(
+                    "Microphone failed to start: {}. Grant access in System Settings → Privacy & Security → Microphone.",
+                    e
+                )
+            };
             eprintln!("[Verba] {}", msg);
             emit_recording_failed(&app_handle, &msg);
             return;

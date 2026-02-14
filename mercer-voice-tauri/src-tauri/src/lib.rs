@@ -23,7 +23,7 @@ fn open_dashboard_window(app: &tauri::AppHandle) {
     }
 
     // Create new dashboard window
-    let _window = WebviewWindowBuilder::new(app, "dashboard", WebviewUrl::App("dashboard.html".into()))
+    match WebviewWindowBuilder::new(app, "dashboard", WebviewUrl::App("dashboard.html".into()))
         .title("Verba — Dashboard")
         .inner_size(880.0, 620.0)
         .min_inner_size(640.0, 480.0)
@@ -31,7 +31,11 @@ fn open_dashboard_window(app: &tauri::AppHandle) {
         .decorations(true)
         .resizable(true)
         .visible(true)
-        .build();
+        .build()
+    {
+        Ok(_) => eprintln!("[Verba] Dashboard window created"),
+        Err(e) => eprintln!("[Verba] Failed to create dashboard window: {}", e),
+    }
 }
 
 #[tauri::command]
