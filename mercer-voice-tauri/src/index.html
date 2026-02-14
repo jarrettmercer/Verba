@@ -4,9 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verba</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    <script>
+        // On Windows, WebView2 doesn't support transparent backgrounds reliably.
+        // Set a solid dark bg early so the window is never white.
+        if (navigator.userAgent.indexOf('Windows') !== -1) {
+            document.documentElement.style.backgroundColor = '#121214';
+        }
+    </script>
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/app.css" />

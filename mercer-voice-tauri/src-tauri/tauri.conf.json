@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' asset: https://asset.localhost tauri: https://tauri.localhost; img-src * data: blob: asset: https://asset.localhost; connect-src 'self' ipc: http://ipc.localhost tauri: https://tauri.localhost; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"
     }
   },
   "bundle": {

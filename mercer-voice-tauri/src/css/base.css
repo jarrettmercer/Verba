@@ -18,7 +18,7 @@ html, body {
     background-color: transparent;
     outline: none;
     color: var(--colors--white);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: var(--font-size--text-default);
     line-height: var(--line-height--text-default);
     font-weight: 400;
@@ -29,10 +29,4 @@ html, body {
     padding: 0;
     width: 100%;
     height: 100%;
-}
-
-/* Windows fallback: WebView2 transparency is unreliable, use dark bg */
-html.platform-windows, html.platform-windows body {
-    background-color: var(--pill-bg, rgba(18, 18, 20, 0.96));
-    border-radius: var(--pill-radius, 17px);
 }

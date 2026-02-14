@@ -1,11 +1,6 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-// Platform detection — Windows needs dark bg fallback (no transparent webview)
-if (navigator.platform.indexOf('Win') >= 0 || navigator.userAgent.indexOf('Windows') >= 0) {
-    document.documentElement.classList.add('platform-windows');
-}
-
 // State machine
 const states = ['idle', 'recording', 'transcribing', 'typing', 'error'];
 let currentState = 'idle';
