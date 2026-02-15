@@ -48,6 +48,8 @@ html, body {
     width: 28px;
     height: 28px;
     object-fit: contain;
+    background: transparent !important;
+    mix-blend-mode: multiply;
 }
 
 .sidebar-title {
@@ -730,6 +732,87 @@ html, body {
     margin-top: -4px;
 }
 
+.transcription-source-toggle {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.transcription-source-toggle .source-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--colors--gray-light);
+}
+
+.transcription-source-toggle .source-option input {
+    margin: 0;
+}
+
+.transcription-source-toggle .source-option:has(input:checked) {
+    color: var(--colors--white);
+}
+
+.transcription-fields {
+    margin-top: 12px;
+}
+
+.local-model-help {
+    font-size: 11px;
+    color: var(--colors--gray);
+    margin-top: 6px;
+    word-break: break-all;
+}
+
+.local-model-help a {
+    color: var(--colors--primary);
+    text-decoration: none;
+}
+
+.local-model-help a:hover {
+    text-decoration: underline;
+}
+
+.local-model-download-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.local-model-download-row .api-status {
+    flex: 1;
+}
+
+.model-download-progress-wrap {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.model-download-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.model-download-progress-fill {
+    height: 100%;
+    background: var(--colors--primary);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.15s ease;
+}
+
+.model-download-progress-wrap .local-model-help {
+    min-width: 4em;
+}
+
 .setting-row-stacked {
     flex-direction: column;
     align-items: stretch !important;
@@ -755,6 +838,15 @@ html, body {
 
 .setting-input::placeholder {
     color: var(--colors--gray);
+}
+
+.setting-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
 }
 
 .api-key-row {

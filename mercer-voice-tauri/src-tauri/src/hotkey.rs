@@ -157,14 +157,24 @@ fn run_worker(rx: mpsc::Receiver<HotkeyEvent>, app_handle: AppHandle) {
                         }
                     };
                     let bundle_id = app.state::<HotkeyState>().take_paste_target();
-                    // Resolve API credentials from store before async spawn
+                    // Resolve transcription config from store before async spawn
                     let store: tauri::State<'_, Store> = app.state();
+                    let source = store.transcription_source();
                     let api_endpoint = store.resolve_endpoint();
                     let api_key = store.resolve_api_key();
+                    let local_model_path = store.resolve_local_model_path();
                     let app_for_paste = app.clone();
                     tauri::async_runtime::spawn(async move {
                         eprintln!("[Verba] Transcribing...");
-                        match transcribe::transcribe_impl(wav_path, api_endpoint, api_key).await {
+                        match transcribe::transcribe_impl(
+                            wav_path,
+                            source,
+                            api_endpoint,
+                            api_key,
+                            local_model_path,
+                        )
+                        .await
+                        {
                             Ok(text) if !text.is_empty() => {
                                 eprintln!("[Verba] Pasting into target app");
                                 let text_for_stats = text.clone();

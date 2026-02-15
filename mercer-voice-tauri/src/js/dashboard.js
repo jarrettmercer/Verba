@@ -312,6 +312,144 @@ settingLaunchAtLogin.addEventListener('change', () => {
     invoke('update_setting', { key: 'launch_at_login', value: settingLaunchAtLogin.checked }).catch(console.error);
 });
 
+// ===== TRANSCRIPTION CONFIG (Azure vs Local) =====
+const sourceAzure = document.getElementById('source-azure');
+const sourceLocal = document.getElementById('source-local');
+const transcriptionAzureFields = document.getElementById('transcription-azure-fields');
+const transcriptionLocalFields = document.getElementById('transcription-local-fields');
+const localModelPathInput = document.getElementById('setting-local-model-path');
+const localModelSizeSelect = document.getElementById('setting-local-model-size');
+const btnSaveTranscription = document.getElementById('btn-save-transcription');
+const transcriptionStatus = document.getElementById('transcription-status');
+
+function updateTranscriptionFieldsVisibility() {
+    const useLocal = sourceLocal && sourceLocal.checked;
+    if (transcriptionAzureFields) transcriptionAzureFields.style.display = useLocal ? 'none' : 'block';
+    if (transcriptionLocalFields) transcriptionLocalFields.style.display = useLocal ? 'block' : 'none';
+}
+
+async function updateDefaultPathForSize(size) {
+    try {
+        const path = await invoke('get_default_local_model_path_for_size', { size: size || 'tiny' });
+        const pathEl = document.getElementById('local-model-default-path');
+        if (pathEl) pathEl.textContent = path ? `Default: ${path}` : 'Default: (unknown)';
+    } catch (_) {}
+}
+
+async function loadTranscriptionConfig() {
+    try {
+        const [config, defaultPath] = await Promise.all([
+            invoke('get_transcription_config'),
+            invoke('get_default_local_model_path').catch(() => null),
+        ]);
+        const source = (config.source || 'azure').toLowerCase();
+        if (source === 'local') {
+            if (sourceLocal) sourceLocal.checked = true;
+            if (sourceAzure) sourceAzure.checked = false;
+        } else {
+            if (sourceAzure) sourceAzure.checked = true;
+            if (sourceLocal) sourceLocal.checked = false;
+        }
+        if (localModelPathInput) localModelPathInput.value = config.local_model_path || '';
+        const size = (config.local_model_size || 'tiny').toLowerCase();
+        if (localModelSizeSelect) localModelSizeSelect.value = ['tiny', 'small', 'medium', 'large'].includes(size) ? size : 'tiny';
+        const pathEl = document.getElementById('local-model-default-path');
+        if (pathEl) pathEl.textContent = defaultPath ? `Default: ${defaultPath}` : 'Default: (unknown)';
+        updateTranscriptionFieldsVisibility();
+    } catch (_) {}
+}
+
+if (sourceAzure) sourceAzure.addEventListener('change', updateTranscriptionFieldsVisibility);
+if (sourceLocal) sourceLocal.addEventListener('change', updateTranscriptionFieldsVisibility);
+
+if (localModelSizeSelect) {
+    localModelSizeSelect.addEventListener('change', () => {
+        updateDefaultPathForSize(localModelSizeSelect.value);
+    });
+}
+
+btnSaveTranscription.addEventListener('click', async () => {
+    const source = sourceLocal && sourceLocal.checked ? 'local' : 'azure';
+    const localModelPath = (localModelPathInput && localModelPathInput.value.trim()) || '';
+    const localModelSize = (localModelSizeSelect && localModelSizeSelect.value) || 'tiny';
+
+    try {
+        await invoke('set_transcription_config', { source, localModelPath, localModelSize });
+        if (transcriptionStatus) {
+            transcriptionStatus.textContent = 'Saved';
+            transcriptionStatus.className = 'api-status success';
+            setTimeout(() => { transcriptionStatus.textContent = ''; }, 3000);
+        }
+    } catch (err) {
+        if (transcriptionStatus) {
+            transcriptionStatus.textContent = 'Failed to save';
+            transcriptionStatus.className = 'api-status error';
+        }
+        console.error('Failed to save transcription config:', err);
+    }
+});
+
+// Download local model in-app with progress bar
+const btnDownloadModel = document.getElementById('btn-download-model');
+const modelDownloadStatus = document.getElementById('model-download-status');
+const modelDownloadProgressWrap = document.getElementById('model-download-progress-wrap');
+const modelDownloadProgressFill = document.getElementById('model-download-progress-fill');
+const modelDownloadProgressText = document.getElementById('model-download-progress-text');
+
+function showDownloadProgress(show) {
+    if (modelDownloadProgressWrap) modelDownloadProgressWrap.style.display = show ? 'flex' : 'none';
+    if (modelDownloadProgressFill) modelDownloadProgressFill.style.width = '0%';
+    if (modelDownloadProgressText) modelDownloadProgressText.textContent = '0%';
+}
+
+function setDownloadProgress(loaded, total) {
+    if (!modelDownloadProgressFill || !modelDownloadProgressText) return;
+    const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+    modelDownloadProgressFill.style.width = pct + '%';
+    if (total > 0) {
+        const loadedMB = (loaded / 1024 / 1024).toFixed(1);
+        const totalMB = (total / 1024 / 1024).toFixed(1);
+        modelDownloadProgressText.textContent = pct + '% (' + loadedMB + ' / ' + totalMB + ' MB)';
+    } else {
+        modelDownloadProgressText.textContent = (loaded / 1024 / 1024).toFixed(1) + ' MB…';
+    }
+}
+
+if (btnDownloadModel) {
+    let unlistenProgress = null;
+    btnDownloadModel.addEventListener('click', async () => {
+        if (modelDownloadStatus) {
+            modelDownloadStatus.textContent = 'Starting…';
+            modelDownloadStatus.className = 'api-status';
+        }
+        showDownloadProgress(true);
+        setDownloadProgress(0, 0);
+        btnDownloadModel.disabled = true;
+        unlistenProgress = await listen('model-download-progress', (event) => {
+            const p = event.payload;
+            if (p && typeof p.loaded === 'number') setDownloadProgress(p.loaded, p.total || 0);
+        });
+        try {
+            const selectedSize = (localModelSizeSelect && localModelSizeSelect.value) || 'tiny';
+            const path = await invoke('download_local_model', { size: selectedSize });
+            if (modelDownloadStatus) {
+                modelDownloadStatus.textContent = 'Downloaded';
+                modelDownloadStatus.className = 'api-status success';
+                setTimeout(() => { modelDownloadStatus.textContent = ''; }, 5000);
+            }
+        } catch (err) {
+            if (modelDownloadStatus) {
+                modelDownloadStatus.textContent = err && (err.message || String(err)) || 'Download failed';
+                modelDownloadStatus.className = 'api-status error';
+            }
+            console.error('Model download failed:', err);
+        }
+        if (unlistenProgress && typeof unlistenProgress === 'function') unlistenProgress();
+        showDownloadProgress(false);
+        btnDownloadModel.disabled = false;
+    });
+}
+
 // ===== API CONFIG =====
 const apiEndpointInput = document.getElementById('setting-api-endpoint');
 const apiKeyInput = document.getElementById('setting-api-key');
@@ -337,7 +475,7 @@ btnSaveApi.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
 
     if (!endpoint || !apiKey) {
-        apiStatus.textContent = 'Both fields are required';
+        apiStatus.textContent = 'Both endpoint and API key are required';
         apiStatus.className = 'api-status error';
         return;
     }
@@ -387,7 +525,14 @@ listen('stats-updated', () => {
 
 // ===== INIT =====
 async function initDashboard() {
-    await Promise.all([loadStats(), loadDictionary(), loadHistory(), loadSettings(), loadApiConfig()]);
+    await Promise.all([
+        loadStats(),
+        loadDictionary(),
+        loadHistory(),
+        loadSettings(),
+        loadTranscriptionConfig(),
+        loadApiConfig(),
+    ]);
 }
 
 if (document.readyState === 'loading') {

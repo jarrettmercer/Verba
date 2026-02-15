@@ -2,14 +2,22 @@ window.waveform = {
     canvas: null,
     ctx: null,
     levels: [],
-    maxLevels: 60,
+    maxLevels: 14,
     animFrameId: null,
+    dpr: 1,
 
     init() {
         this.canvas = document.getElementById('waveformCanvas');
         if (!this.canvas) return;
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = 70;
+        const h = 18;
+        this.canvas.width = w * this.dpr;
+        this.canvas.height = h * this.dpr;
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
         this.ctx = this.canvas.getContext('2d');
-        this.levels = new Array(this.maxLevels).fill(0.05);
+        this.levels = new Array(this.maxLevels).fill(0.12);
         this.startRendering();
     },
 
@@ -38,36 +46,34 @@ window.waveform = {
     },
 
     draw() {
-        const { canvas, ctx, levels } = this;
+        const { canvas, ctx, levels, dpr } = this;
         if (!canvas || !ctx) return;
 
-        const w = canvas.width;
-        const h = canvas.height;
+        const w = 70;
+        const h = 18;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
         ctx.clearRect(0, 0, w, h);
 
         const barCount = levels.length;
         const barWidth = 3;
         const gap = 2;
         const totalBarWidth = barWidth + gap;
-        const startX = (w - barCount * totalBarWidth) / 2;
+        const startX = Math.round((w - barCount * totalBarWidth) / 2);
 
         const centerY = h / 2;
-        const maxBarHeight = h * 0.8;
+        const maxBarHeight = h * 0.9;
         const minBarHeight = 3;
 
-        const drawBar = typeof ctx.roundRect === 'function'
-            ? (x, y, w, h) => { ctx.roundRect(x, y, w, h, 1.5); }
-            : (x, y, w, h) => { ctx.rect(x, y, w, h); };
+        ctx.fillStyle = '#ffffff';
         for (let i = 0; i < barCount; i++) {
             const level = levels[i];
             const barHeight = Math.max(minBarHeight, level * maxBarHeight);
-            const x = startX + i * totalBarWidth;
-            const y = centerY - barHeight / 2;
+            const x = Math.round(startX + i * totalBarWidth);
+            const y = Math.round(centerY - barHeight / 2);
+            const bh = Math.round(barHeight);
 
-            ctx.fillStyle = `rgba(167, 139, 250, ${0.5 + level * 0.5})`;
-            ctx.beginPath();
-            drawBar(x, y, barWidth, barHeight);
-            ctx.fill();
+            ctx.fillRect(x, y, barWidth, bh);
         }
     },
 

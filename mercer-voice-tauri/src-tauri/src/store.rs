@@ -54,6 +54,39 @@ impl Default for ApiConfig {
     }
 }
 
+/// "azure" = cloud Whisper API; "local" = embedded whisper.cpp model.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionConfig {
+    #[serde(default)]
+    pub source: String,
+    /// Optional path to ggml model. If empty, default path under app data is used (based on local_model_size).
+    #[serde(default)]
+    pub local_model_path: String,
+    /// Model size for default path and download: "tiny" | "small" | "medium" | "large".
+    #[serde(default)]
+    pub local_model_size: String,
+}
+
+impl Default for TranscriptionConfig {
+    fn default() -> Self {
+        Self {
+            source: "azure".to_string(),
+            local_model_path: String::new(),
+            local_model_size: "tiny".to_string(),
+        }
+    }
+}
+
+/// Filename for the given model size (English .en models where available).
+fn model_filename_for_size(size: &str) -> &'static str {
+    match size {
+        "small" => "ggml-small.en.bin",
+        "medium" => "ggml-medium.en.bin",
+        "large" => "ggml-large-v3.bin",
+        _ => "ggml-tiny.en.bin",
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub sounds_enabled: bool,
@@ -61,6 +94,8 @@ pub struct Settings {
     pub launch_at_login: bool,
     #[serde(default)]
     pub api_config: ApiConfig,
+    #[serde(default)]
+    pub transcription: TranscriptionConfig,
 }
 
 impl Default for Settings {
@@ -70,6 +105,7 @@ impl Default for Settings {
             auto_paste: true,
             launch_at_login: false,
             api_config: ApiConfig::default(),
+            transcription: TranscriptionConfig::default(),
         }
     }
 }
@@ -96,6 +132,8 @@ impl Default for StoreData {
 pub struct Store {
     data: Mutex<StoreData>,
     path: Mutex<Option<PathBuf>>,
+    /// Set at init; used for default local model path.
+    app_data_dir: Mutex<Option<PathBuf>>,
 }
 
 impl Default for Store {
@@ -103,6 +141,7 @@ impl Default for Store {
         Self {
             data: Mutex::new(StoreData::default()),
             path: Mutex::new(None),
+            app_data_dir: Mutex::new(None),
         }
     }
 }
@@ -121,6 +160,10 @@ impl Store {
         }
 
         *self.path.lock().unwrap() = Some(store_path);
+        *self.app_data_dir.lock().unwrap() = Some(app_data_dir.clone());
+        // Create default models dir so user has a known place to put ggml-tiny.en.bin
+        let models_dir = app_data_dir.join("models");
+        let _ = fs::create_dir_all(models_dir);
     }
 
     fn save(&self) {
@@ -273,21 +316,82 @@ impl Store {
         self.save();
     }
 
-    /// Resolve the Whisper endpoint: store first, then env var.
+    /// Resolve the Whisper endpoint from dashboard settings only (no .env or env var fallback).
     pub fn resolve_endpoint(&self) -> Option<String> {
         let cfg = self.get_api_config();
         if !cfg.endpoint.is_empty() {
             return Some(cfg.endpoint);
         }
-        std::env::var("AZURE_WHISPER_ENDPOINT").ok()
+        None
     }
 
-    /// Resolve the Whisper API key: store first, then env var.
+    /// Resolve the Whisper API key from dashboard settings only (no .env or env var fallback).
     pub fn resolve_api_key(&self) -> Option<String> {
         let cfg = self.get_api_config();
         if !cfg.api_key.is_empty() {
             return Some(cfg.api_key);
         }
-        std::env::var("AZURE_WHISPER_API_KEY").ok()
+        None
+    }
+
+    // --- Transcription config (Azure vs Local) ---
+
+    pub fn get_transcription_config(&self) -> TranscriptionConfig {
+        self.data.lock().unwrap().settings.transcription.clone()
+    }
+
+    pub fn set_transcription_config(
+        &self,
+        source: String,
+        local_model_path: String,
+        local_model_size: String,
+    ) {
+        let mut data = self.data.lock().unwrap();
+        data.settings.transcription.source = source;
+        data.settings.transcription.local_model_path = local_model_path;
+        data.settings.transcription.local_model_size = normalize_model_size(&local_model_size);
+        drop(data);
+        self.save();
+    }
+
+    /// Default path for a given size (for UI preview). Does not use custom path.
+    pub fn get_default_local_model_path_for_size(&self, size: &str) -> Option<String> {
+        let app_dir = self.app_data_dir.lock().unwrap().clone()?;
+        let name = model_filename_for_size(size);
+        let p = app_dir.join("models").join(name);
+        Some(p.to_string_lossy().to_string())
+    }
+
+    /// Preferred transcription source: "azure" or "local".
+    pub fn transcription_source(&self) -> String {
+        let s = self.data.lock().unwrap().settings.transcription.source.clone();
+        if s == "local" { "local".to_string() } else { "azure".to_string() }
+    }
+
+    /// Path to the local Whisper model file. Uses custom path if set, else default under app data for current size.
+    pub fn resolve_local_model_path(&self) -> Option<PathBuf> {
+        let cfg = self.get_transcription_config();
+        if !cfg.local_model_path.is_empty() {
+            let p = PathBuf::from(&cfg.local_model_path);
+            return Some(p);
+        }
+        let app_dir = self.app_data_dir.lock().unwrap().clone()?;
+        let name = model_filename_for_size(&cfg.local_model_size);
+        let default_path = app_dir.join("models").join(name);
+        Some(default_path)
+    }
+
+    /// Default path where the app looks for the local model (for display in UI). Uses current size from config.
+    pub fn get_default_local_model_path(&self) -> Option<String> {
+        let cfg = self.get_transcription_config();
+        self.get_default_local_model_path_for_size(&cfg.local_model_size)
+    }
+}
+
+fn normalize_model_size(s: &str) -> String {
+    let t = s.trim().to_lowercase();
+    match t.as_str() {
+        "small" | "medium" | "large" => t,
+        _ => "tiny".to_string(),
     }
 }

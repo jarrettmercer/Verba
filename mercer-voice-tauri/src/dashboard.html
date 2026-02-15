@@ -251,35 +251,92 @@
                 </div>
 
                 <div class="settings-section">
-                    <h3>API Configuration</h3>
-                    <p class="settings-section-desc">Connect to Azure Whisper for speech-to-text. These credentials are stored locally on this device only.</p>
-                    <div class="setting-row setting-row-stacked">
-                        <div class="setting-info">
-                            <div class="setting-name">Whisper Endpoint</div>
-                            <div class="setting-description">Your Azure OpenAI Whisper deployment URL</div>
-                        </div>
-                        <input type="url" id="setting-api-endpoint" class="setting-input" placeholder="https://your-resource.openai.azure.com/openai/deployments/whisper/audio/transcriptions?api-version=2024-06-01" />
-                    </div>
-                    <div class="setting-row setting-row-stacked">
-                        <div class="setting-info">
-                            <div class="setting-name">API Key</div>
-                            <div class="setting-description">Your Azure OpenAI API key</div>
-                        </div>
-                        <div class="api-key-row">
-                            <input type="password" id="setting-api-key" class="setting-input" placeholder="Enter your API key" />
-                            <button class="btn btn-ghost btn-sm" id="btn-toggle-key" title="Show/hide key">
-                                <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+                    <h3>Transcription</h3>
+                    <p class="settings-section-desc">Choose where speech-to-text runs: in the cloud (Azure) or on this Mac (local model).</p>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <span id="api-status" class="api-status"></span>
+                            <div class="setting-name">Source</div>
+                            <div class="setting-description">Azure uses your API key; Local uses an embedded model (no key required).</div>
                         </div>
-                        <button class="btn btn-primary btn-sm" id="btn-save-api">Save API Config</button>
+                        <div class="transcription-source-toggle">
+                            <label class="source-option">
+                                <input type="radio" name="transcription-source" value="azure" id="source-azure" />
+                                <span>Azure (cloud)</span>
+                            </label>
+                            <label class="source-option">
+                                <input type="radio" name="transcription-source" value="local" id="source-local" />
+                                <span>Local (this Mac)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="transcription-azure-fields" class="transcription-fields">
+                        <div class="setting-row setting-row-stacked">
+                            <div class="setting-info">
+                                <div class="setting-name">Whisper Endpoint</div>
+                                <div class="setting-description">Your Azure OpenAI Whisper deployment URL</div>
+                            </div>
+                            <input type="url" id="setting-api-endpoint" class="setting-input" placeholder="https://your-resource.openai.azure.com/openai/deployments/whisper/audio/transcriptions?api-version=2024-06-01" />
+                        </div>
+                        <div class="setting-row setting-row-stacked">
+                            <div class="setting-info">
+                                <div class="setting-name">API Key</div>
+                                <div class="setting-description">Your Azure OpenAI API key</div>
+                            </div>
+                            <div class="api-key-row">
+                                <input type="password" id="setting-api-key" class="setting-input" placeholder="Enter your API key" />
+                                <button class="btn btn-ghost btn-sm" id="btn-toggle-key" title="Show/hide key">
+                                    <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span id="api-status" class="api-status"></span>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-save-api">Save API Config</button>
+                        </div>
+                    </div>
+                    <div id="transcription-local-fields" class="transcription-fields" style="display:none;">
+                        <div class="setting-row setting-row-stacked">
+                            <div class="setting-info">
+                                <div class="setting-name">Model size</div>
+                                <div class="setting-description">Larger models are more accurate but slower and use more disk space.</div>
+                            </div>
+                            <select id="setting-local-model-size" class="setting-input setting-select">
+                                <option value="tiny">Tiny (~75 MB) — fastest</option>
+                                <option value="small">Small (~466 MB)</option>
+                                <option value="medium">Medium (~1.5 GB)</option>
+                                <option value="large">Large (~2.9 GB) — best quality</option>
+                            </select>
+                        </div>
+                        <div class="setting-row setting-row-stacked">
+                            <div class="setting-info">
+                                <div class="setting-name">Model path (optional)</div>
+                                <div class="setting-description">Leave empty to use the default location for the size above.</div>
+                            </div>
+                            <input type="text" id="setting-local-model-path" class="setting-input" placeholder="Leave empty for default" />
+                            <div class="local-model-help" id="local-model-default-path">Default: …</div>
+                            <div class="local-model-download-row">
+                                <button type="button" class="btn btn-primary btn-sm" id="btn-download-model">Download model</button>
+                                <span id="model-download-status" class="api-status"></span>
+                            </div>
+                            <div id="model-download-progress-wrap" class="model-download-progress-wrap" style="display:none;">
+                                <div class="model-download-progress-bar">
+                                    <div id="model-download-progress-fill" class="model-download-progress-fill"></div>
+                                </div>
+                                <span id="model-download-progress-text" class="local-model-help">0%</span>
+                            </div>
+                            <div class="local-model-help" id="local-model-download-hint">Downloads the selected model into the default folder above.</div>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <span id="transcription-status" class="api-status"></span>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-save-transcription">Save transcription settings</button>
+                        </div>
                     </div>
                 </div>
 

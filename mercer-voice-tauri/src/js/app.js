@@ -2,16 +2,22 @@ const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 // State machine
-const states = ['idle', 'recording', 'transcribing', 'typing', 'error'];
+const states = ['idle', 'recording', 'transcribing', 'error'];
 let currentState = 'idle';
 /** When set (e.g. from hotkey), we paste into this app's window instead of current focus. */
 let pasteTargetBundleId = null;
 
 // Drag vs hold-to-record: any movement = drag; no movement for this long = start recording
 const HOLD_TO_RECORD_MS = 280;
+// Double-tap on pill (within time/distance) opens dashboard
+const DOUBLE_TAP_MS = 400;
+const DOUBLE_TAP_MAX_DIST = 25;
 let pointerDownAt = null;
 let holdTimer = null;
 let isDragging = false;
+let lastTapAt = 0;
+let lastTapX = 0;
+let lastTapY = 0;
 
 // DOM elements
 const pill = document.getElementById('pill');
@@ -69,12 +75,26 @@ function init() {
             startWindowDrag();
         }
     });
-    pill.addEventListener('pointerup', () => {
+    pill.addEventListener('pointerup', (e) => {
         if (holdTimer) {
             clearTimeout(holdTimer);
             holdTimer = null;
         }
         if (currentState === 'recording' && !isDragging) onHotkeyReleased();
+        // Double-tap (idle, no drag) opens dashboard
+        if (currentState === 'idle' && !isDragging && pointerDownAt !== null) {
+            const now = Date.now();
+            const dx = e.clientX - lastTapX;
+            const dy = e.clientY - lastTapY;
+            if (now - lastTapAt <= DOUBLE_TAP_MS && (dx * dx + dy * dy) <= DOUBLE_TAP_MAX_DIST * DOUBLE_TAP_MAX_DIST) {
+                lastTapAt = 0;
+                invoke('open_dashboard').catch(err => console.error('Failed to open dashboard:', err));
+            } else {
+                lastTapAt = now;
+                lastTapX = e.clientX;
+                lastTapY = e.clientY;
+            }
+        }
         pointerDownAt = null;
         isDragging = false;
     });
@@ -111,8 +131,7 @@ function init() {
     });
     listen('dictation-complete', () => {
         waveform.reset();
-        setState('typing');
-        setTimeout(() => setState('idle'), 1500);
+        setState('idle');
     });
     listen('recording-failed', (event) => {
         setErrorMessage(event.payload || 'Microphone failed');
@@ -170,7 +189,6 @@ async function onHotkeyReleased() {
 
         const text = await invoke('transcribe', { wavPath });
 
-        setState('typing');
         const hadTargetApp = !!pasteTargetBundleId;
         await invoke('paste_text', { text, targetBundleId: pasteTargetBundleId });
         pasteTargetBundleId = null;
@@ -178,18 +196,7 @@ async function onHotkeyReleased() {
         // Record dictation stats (pill click flow)
         invoke('record_dictation', { text }).catch(() => {});
 
-        if (!hadTargetApp) {
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-            const doneLabel = document.querySelector('.pill-typing .pill-label');
-            if (doneLabel) doneLabel.textContent = isMac ? 'Copied — paste with Cmd+V' : 'Copied — paste with Ctrl+V';
-        }
-
-        // Brief "Done" display, then back to idle
-        setTimeout(() => {
-            const doneLabel = document.querySelector('.pill-typing .pill-label');
-            if (doneLabel) doneLabel.textContent = 'Done';
-            setState('idle');
-        }, hadTargetApp ? 1500 : 2500);
+        setState('idle');
     } catch (err) {
         console.error('Dictation error:', err);
         setErrorMessage(err && (err.message || String(err)));

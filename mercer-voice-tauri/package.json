@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev": "tauri dev",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "icon:strip-bg": "node scripts/strip-icon-background.js"
+    "icon:strip-bg": "node scripts/strip-icon-background.js",
+    "icon:fix-dock": "node scripts/strip-icon-background.js && npm run tauri icon src-tauri/icons/icon-1024-stripped.png",
+    "icon:apply-dock": "bash scripts/apply-dock-icon.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

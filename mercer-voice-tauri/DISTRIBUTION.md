@@ -66,21 +66,8 @@ For **Right Cmd** (hold to record, release to paste) to work as a **global** hot
 
 If the hotkey only works when Murmur’s window is focused, add Murmur to **Accessibility** as above and restart. You can still use **click-and-hold on the pill** to record without the hotkey.
 
-**Azure Whisper (required for transcription)**  
-The installed app does not use the repo’s `.env`. Put your Azure config in the app’s config folder:
-
-1. Create a file named `.env` in:
-   - **macOS:** `~/Library/Application Support/app.murmur/.env`
-   - **Windows:** `%APPDATA%\app.murmur\.env` (e.g. `C:\Users\You\AppData\Roaming\app.murmur\.env`)
-
-2. Put these two lines in that file (with your real values):
-
-   ```
-   AZURE_WHISPER_ENDPOINT=https://YOUR_RESOURCE.cognitiveservices.azure.com/openai/deployments/whisper/audio/translations?api-version=2024-06-01
-   AZURE_WHISPER_API_KEY=your_api_key_here
-   ```
-
-3. Restart Murmur. You can copy from your project’s `.env` if you already have one.
+**Azure Whisper (for cloud transcription)**  
+Configure Azure in the app: open the **Dashboard** (click the pill’s settings icon), go to **Settings → Transcription**, choose **Azure (cloud)**, then enter your **Whisper Endpoint** and **API Key** and click **Save API Config**. The app does not use a `.env` file; all Azure credentials come from the dashboard only.
 
 ---
 

@@ -1,27 +1,21 @@
 #!/usr/bin/env node
 /**
- * Strip dark background and border from the app icon so only the purple waveform remains.
- * Reads from src-tauri/icons/128x128.png, writes to src/icon.png (for pill display).
+ * Strip background (dark and white) from the app icon so only the purple waveform remains.
+ * - Reads 128x128.png → writes src/icon.png (for in-app pill).
+ * - Reads icon-1024.png → writes icon-1024-stripped.png (for regenerating dock .icns).
  * Run: node scripts/strip-icon-background.js
+ * Then run: npm run tauri icon src-tauri/icons/icon-1024-stripped.png
+ * to regenerate icon.icns so the Mac dock icon has no white corners.
  */
 const sharp = require('sharp');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const INPUT = path.join(ROOT, 'src-tauri/icons/128x128.png');
-const OUTPUT = path.join(ROOT, 'src/icon.png');
+const ICONS_DIR = path.join(ROOT, 'src-tauri', 'icons');
 
-async function main() {
-    const { data, info } = await sharp(INPUT)
-        .ensureAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-
+function stripWhiteAndBackground(data, info, edge, cornerR) {
     const { width, height, channels } = info;
-    const edge = 5;
-    const cornerR = 28; // corner radius of the rounded rect in the source icon
 
-    // True if (x,y) is in one of the four corner cutouts (outside the rounded rect)
     function inCornerCutout(px, py) {
         const L = edge;
         const R = cornerR;
@@ -55,18 +49,65 @@ async function main() {
             const gray = (r + g + b) / 3;
             const isPurple = b > 80 && r > 50 && (r + b) > g + 80;
             const isBright = gray > 145;
+            const isWhite = gray > 200;
             const inShape = insideRoundedRect(x, y);
-            if (!inShape || (!isPurple && !isBright)) {
+            const keep = inShape && (isPurple || (isBright && !isWhite));
+            if (!keep) {
+                data[i] = 0;
+                data[i + 1] = 0;
+                data[i + 2] = 0;
                 data[i + 3] = 0;
             }
         }
     }
+}
 
-    await sharp(data, { raw: { width, height, channels } })
+async function processIcon(inputPath, outputPath, edge, cornerR) {
+    const { data, info } = await sharp(inputPath)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+    stripWhiteAndBackground(data, info, edge, cornerR);
+
+    await sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
         .png()
-        .toFile(OUTPUT);
+        .toFile(outputPath);
 
-    console.log('Wrote', OUTPUT);
+    console.log('Wrote', outputPath);
+}
+
+async function main() {
+    await processIcon(
+        path.join(ICONS_DIR, '128x128.png'),
+        path.join(ROOT, 'src', 'icon.png'),
+        5,
+        28
+    );
+
+    const icon1024 = path.join(ICONS_DIR, 'icon-1024.png');
+    try {
+        await require('fs').promises.access(icon1024);
+    } catch {
+        console.log('Skipping icon-1024 (file not found). Run: npm run tauri icon <your-1024.png> to regenerate dock icon.');
+        return;
+    }
+
+    await processIcon(
+        icon1024,
+        path.join(ICONS_DIR, 'icon-1024-stripped.png'),
+        40,
+        224
+    );
+
+    console.log('');
+    console.log('To update the Mac dock icon, run:');
+    console.log('  npm run tauri icon src-tauri/icons/icon-1024-stripped.png');
+    console.log('  npm run tauri build  (or your usual build)');
+    console.log('Then clear the icon cache so macOS shows the new icon:');
+    console.log('  ./scripts/clear-mac-icon-cache.sh');
+    console.log('(Or: sudo rm -rf /Library/Caches/com.apple.iconservices.store && killall Dock)');
+    console.log('Fully quit the app and open the newly built app. If the dock still shows white, log out and back in.');
 }
 
 main().catch((err) => {

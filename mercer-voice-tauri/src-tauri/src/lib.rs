@@ -7,10 +7,15 @@ mod sounds;
 mod store;
 mod transcribe;
 
-use store::{ApiConfig, DictionaryEntry, Settings, Stats, Store};
+use std::path::Path;
+use futures_util::StreamExt;
+use serde::Serialize;
+use tokio::io::AsyncWriteExt;
+use store::{ApiConfig, DictionaryEntry, Settings, Stats, Store, TranscriptionConfig};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::PhysicalPosition;
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 // ===== DASHBOARD WINDOW =====
 
@@ -122,13 +127,134 @@ fn set_api_config(store: tauri::State<'_, Store>, endpoint: String, api_key: Str
     store.set_api_config(endpoint, api_key);
 }
 
+// ===== TRANSCRIPTION CONFIG (Azure vs Local) =====
+
+#[tauri::command]
+fn get_transcription_config(store: tauri::State<'_, Store>) -> TranscriptionConfig {
+    store.get_transcription_config()
+}
+
+#[tauri::command]
+fn set_transcription_config(
+    store: tauri::State<'_, Store>,
+    source: String,
+    local_model_path: String,
+    local_model_size: String,
+) {
+    store.set_transcription_config(source, local_model_path, local_model_size);
+}
+
+#[tauri::command]
+fn get_default_local_model_path(store: tauri::State<'_, Store>) -> Option<String> {
+    store.get_default_local_model_path()
+}
+
+#[tauri::command]
+fn get_default_local_model_path_for_size(
+    store: tauri::State<'_, Store>,
+    size: String,
+) -> Option<String> {
+    store.get_default_local_model_path_for_size(&size)
+}
+
+const GGML_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
+
+#[derive(Clone, Serialize)]
+struct DownloadProgress {
+    loaded: u64,
+    total: u64,
+}
+
+#[tauri::command]
+async fn download_local_model(
+    app: AppHandle,
+    store: tauri::State<'_, Store>,
+    size: String,
+) -> Result<String, String> {
+    // Use the size passed from the UI (dropdown selection), not the saved config
+    let size = size.trim().to_lowercase();
+    let size = if matches!(size.as_str(), "small" | "medium" | "large") {
+        size
+    } else {
+        "tiny".to_string()
+    };
+    let filename = match size.as_str() {
+        "small" => "ggml-small.en.bin",
+        "medium" => "ggml-medium.en.bin",
+        "large" => "ggml-large-v3.bin",
+        _ => "ggml-tiny.en.bin",
+    };
+    let url = format!("{}/{}", GGML_BASE_URL, filename);
+
+    let path_str = store
+        .get_default_local_model_path_for_size(&size)
+        .ok_or_else(|| "Could not get default model path".to_string())?;
+    let path = Path::new(&path_str).to_path_buf();
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Invalid model path".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|e| format!("Could not create models folder: {}", e))?;
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(600))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Download failed: server returned {}",
+            response.status()
+        ));
+    }
+
+    let total = response.content_length().unwrap_or(0);
+    let mut stream = response.bytes_stream();
+    let mut file = tokio::fs::File::create(&path)
+        .await
+        .map_err(|e| format!("Failed to create model file: {}", e))?;
+    let mut loaded: u64 = 0;
+    let mut last_emit_pct = 0u8;
+
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| format!("Download stream error: {}", e))?;
+        let len = bytes.len() as u64;
+        loaded += len;
+        tokio::io::AsyncWriteExt::write_all(&mut file, &bytes)
+            .await
+            .map_err(|e| format!("Failed to write model file: {}", e))?;
+        let pct = if total > 0 {
+            ((loaded as f64 / total as f64) * 100.0) as u8
+        } else {
+            0
+        };
+        if pct >= last_emit_pct + 2 || loaded == len || (total > 0 && loaded >= total) {
+            last_emit_pct = pct;
+            let _ = app.emit_to(
+                "dashboard",
+                "model-download-progress",
+                DownloadProgress { loaded, total },
+            );
+        }
+    }
+
+    file.flush()
+        .await
+        .map_err(|e| format!("Failed to flush model file: {}", e))?;
+
+    eprintln!("[Verba] Downloaded {} to {}", filename, path_str);
+    Ok(path_str)
+}
+
 // ===== APP SETUP =====
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load .env from current directory (dev when run from project root)
-    dotenvy::dotenv().ok();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(audio::AudioState::default())
@@ -138,10 +264,7 @@ pub fn run() {
             // Load .env from app data dir so installed app finds Azure config
             if let Ok(app_data_dir) = app.path().app_data_dir() {
                 let _ = std::fs::create_dir_all(app_data_dir.as_path());
-                let env_path = app_data_dir.join(".env");
-                if env_path.exists() {
-                    dotenvy::from_path(&env_path).ok();
-                }
+                // Azure credentials come from Dashboard → Settings only (we do not load .env).
 
                 // Initialize the persistent store
                 let store: tauri::State<'_, Store> = app.state();
@@ -155,6 +278,21 @@ pub fn run() {
 
             // Build system tray
             build_tray(app)?;
+
+            // Dock pill at bottom-center of primary monitor on first load
+            if let Some(main_win) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = main_win.primary_monitor() {
+                    if let Ok(win_size) = main_win.outer_size() {
+                        let mon_pos = monitor.position();
+                        let mon_size = monitor.size();
+                        const MARGIN_BOTTOM: i32 = 28;
+                        let x = mon_pos.x + (mon_size.width as i32 - win_size.width as i32) / 2;
+                        // Top-left origin: place window so its top is (margin) above the bottom of the monitor
+                        let y = mon_pos.y + mon_size.height as i32 - win_size.height as i32 - MARGIN_BOTTOM;
+                        let _ = main_win.set_position(PhysicalPosition::new(x, y));
+                    }
+                }
+            }
 
             Ok(())
         })
@@ -175,6 +313,11 @@ pub fn run() {
             update_setting,
             get_api_config,
             set_api_config,
+            get_transcription_config,
+            set_transcription_config,
+            get_default_local_model_path,
+            get_default_local_model_path_for_size,
+            download_local_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

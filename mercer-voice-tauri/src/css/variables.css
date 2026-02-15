@@ -14,7 +14,7 @@
 
     /* Glass pill */
     --pill-bg: rgba(18, 18, 20, 0.96);
-    --pill-bg-recording: rgba(24, 21, 38, 0.96);
+    --pill-bg-recording: rgba(18, 18, 20, 0.98);
     --pill-border: rgba(255, 255, 255, 0.06);
     --pill-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 
@@ -33,9 +33,15 @@
     --font-weight--semibold: 600;
     --line-height--text-default: 1.4;
 
-    /* Pill dimensions — small overlay like Whisper Flow */
-    --pill-width: 180px;
-    --pill-height: 34px;
-    --pill-radius: 17px;
-    --pill-blur: 20px;
+    /* Pill dimensions — idle (drag bar, iPhone home-indicator style) */
+    --pill-width: 76px;
+    --pill-height: 12px;
+    --pill-radius: 6px;
+    --pill-blur: 4px;
+    --pill-bg-idle: transparent;
+
+    /* Pill dimensions — when recording (hotkey held) */
+    --pill-width-recording: 140px;
+    --pill-height-recording: 32px;
+    --pill-radius-recording: 16px;
 }

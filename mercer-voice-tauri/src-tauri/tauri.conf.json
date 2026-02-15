@@ -13,8 +13,8 @@
       {
         "label": "main",
         "title": "Verba",
-        "width": 200,
-        "height": 40,
+        "width": 145,
+        "height": 36,
         "resizable": false,
         "decorations": false,
         "shadow": false,
