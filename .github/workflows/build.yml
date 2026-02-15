@@ -10,68 +10,6 @@ defaults:
     working-directory: mercer-voice-tauri
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    name: Build (Windows)
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: mercer-voice-tauri/src-tauri
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Build Tauri app
-        run: npm run tauri:build
-        env:
-          CI: "true"
-          AZURE_WHISPER_ENDPOINT: ${{ secrets.AZURE_WHISPER_ENDPOINT }}
-          AZURE_WHISPER_API_KEY: ${{ secrets.AZURE_WHISPER_API_KEY }}
-
-      - name: Create portable folder
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "Verba-Windows"
-          # Find the app exe (could be Verba.exe or mercer-voice.exe)
-          $exes = Get-ChildItem "src-tauri/target/release/*.exe" -File | Where-Object { $_.Name -notmatch "^(build-script|vc)"}
-          Write-Host "Found executables:" $exes.Name
-          foreach ($exe in $exes) {
-            Copy-Item $exe.FullName "Verba-Windows/"
-          }
-          # Copy any DLLs the app needs from the release dir
-          Get-ChildItem "src-tauri/target/release/*.dll" -File | ForEach-Object {
-            Write-Host "Copying DLL:" $_.Name
-            Copy-Item $_.FullName "Verba-Windows/"
-          }
-          Write-Host "Portable folder contents:"
-          Get-ChildItem "Verba-Windows/"
-
-      - name: Upload portable folder
-        uses: actions/upload-artifact@v4
-        with:
-          name: Verba-Windows-Portable
-          path: mercer-voice-tauri/Verba-Windows/
-          if-no-files-found: error
-
-      - name: Upload NSIS installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: Verba-Windows-Installer
-          path: mercer-voice-tauri/src-tauri/target/release/bundle/nsis/*.exe
-          if-no-files-found: warn
-
   build-macos:
     runs-on: macos-latest
     name: Build (macOS)
