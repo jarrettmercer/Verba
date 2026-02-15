@@ -67,7 +67,7 @@ window.waveform = {
 
         ctx.fillStyle = '#ffffff';
         for (let i = 0; i < barCount; i++) {
-            const level = levels[i];
+            const level = levels[barCount - 1 - i];
             const barHeight = Math.max(minBarHeight, level * maxBarHeight);
             const x = Math.round(startX + i * totalBarWidth);
             const y = Math.round(centerY - barHeight / 2);

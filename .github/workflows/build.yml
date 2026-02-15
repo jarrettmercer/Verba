@@ -34,8 +34,9 @@ jobs:
         run: npm ci
 
       - name: Build Tauri app
-        run: npm run tauri build
+        run: npm run tauri:build
         env:
+          CI: "true"
           AZURE_WHISPER_ENDPOINT: ${{ secrets.AZURE_WHISPER_ENDPOINT }}
           AZURE_WHISPER_API_KEY: ${{ secrets.AZURE_WHISPER_API_KEY }}
 
@@ -95,8 +96,9 @@ jobs:
         run: npm ci
 
       - name: Build Tauri app
-        run: npm run tauri build
+        run: npm run tauri:build
         env:
+          CI: "true"
           AZURE_WHISPER_ENDPOINT: ${{ secrets.AZURE_WHISPER_ENDPOINT }}
           AZURE_WHISPER_API_KEY: ${{ secrets.AZURE_WHISPER_API_KEY }}
 
