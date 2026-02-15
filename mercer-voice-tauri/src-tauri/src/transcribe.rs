@@ -21,6 +21,50 @@ fn client() -> &'static reqwest::Client {
     })
 }
 
+/// Apply self-corrections so "X no scratch that Y" or "X I mean Y" becomes "X' Y" where X' is X
+/// with the last phrase replaced by Y (e.g. "meet at 8 p.m. No scratch that 7 p.m." → "meet at 7 p.m.").
+fn apply_self_corrections(text: &str) -> String {
+    let t = text.trim();
+    if t.is_empty() {
+        return text.to_string();
+    }
+    let lower = t.to_lowercase();
+    let markers = [
+        " no scratch that ",
+        " scratch that ",
+        " i mean ",
+        " i meant ",
+        " no, scratch that ",
+        ", scratch that ",
+    ];
+    let mut found_at: Option<(usize, usize)> = None;
+    for m in &markers {
+        if let Some(pos) = lower.rfind(m) {
+            if found_at.map_or(true, |(p, _)| pos > p) {
+                found_at = Some((pos, m.len()));
+            }
+        }
+    }
+    let Some((marker_start, marker_len)) = found_at else {
+        return text.to_string();
+    };
+    let before = t[..marker_start].trim_end();
+    let correction = t[marker_start + marker_len..].trim();
+    if before.is_empty() || correction.is_empty() {
+        return text.to_string();
+    }
+    let before_words: Vec<&str> = before.split_whitespace().collect();
+    let correction_words: Vec<&str> = correction.split_whitespace().collect();
+    let n = correction_words.len().min(before_words.len());
+    if n == 0 {
+        return format!("{} {}", before, correction);
+    }
+    let keep = before_words.len().saturating_sub(n);
+    let mut out: Vec<&str> = before_words[..keep].to_vec();
+    out.extend(correction_words);
+    out.join(" ")
+}
+
 /// Whisper often returns these for silence or near-silence; treat as nothing to paste.
 fn is_likely_hallucination(text: &str) -> bool {
     let t = text.trim().to_lowercase();
@@ -96,7 +140,10 @@ fn transcribe_with_context(ctx: &WhisperContext, wav_path: &str) -> Result<Strin
 
     let mut state = ctx.create_state().map_err(|e| format!("Failed to create Whisper state: {:?}", e))?;
 
-    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+    let mut params = FullParams::new(SamplingStrategy::BeamSearch {
+        beam_size: 5,
+        patience: -1.0,
+    });
     params.set_print_progress(false);
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
@@ -125,7 +172,7 @@ fn transcribe_with_context(ctx: &WhisperContext, wav_path: &str) -> Result<Strin
     if is_likely_hallucination(trimmed) {
         return Ok(String::new());
     }
-    Ok(trimmed.to_string())
+    Ok(apply_self_corrections(trimmed))
 }
 
 /// Request for the dedicated local transcription thread: (wav_path, model_path, reply_sender).
@@ -275,7 +322,7 @@ async fn transcribe_azure(
             if trimmed.is_empty() {
                 return Err("Whisper returned empty text".to_string());
             }
-            let out = trimmed.to_string();
+            let out = apply_self_corrections(trimmed);
             if is_likely_hallucination(&out) {
                 return Ok(String::new());
             }
