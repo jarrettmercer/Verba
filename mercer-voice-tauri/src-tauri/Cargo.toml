@@ -19,7 +19,13 @@ hound = "3.5"
 rodio = "0.18"
 arboard = "3"
 enigo = { version = "0.2", features = ["serde"] }
+
+# Whisper: Metal on macOS, CPU on Windows/Linux (metal is macOS-only and breaks CI on Windows)
+[target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.15", default-features = false, features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+whisper-rs = { version = "0.15", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 rdev = "0.5"
