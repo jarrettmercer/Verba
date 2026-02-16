@@ -33,10 +33,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # Force whisper-rs-sys to reconfigure so CMake picks up CFLAGS/CMAKE_C_FLAGS (i8mm)
+      - name: Clear whisper-rs-sys build cache
+        run: rm -rf src-tauri/target/release/build/whisper-rs-sys-*
+
       - name: Build Tauri app
         run: npm run tauri:build
         env:
           CI: "true"
+          # ggml ARM quants need i8mm; set so whisper-rs-sys CMake build uses them
+          CFLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
+          CXXFLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
+          CMAKE_C_FLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
+          CMAKE_CXX_FLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
           AZURE_WHISPER_ENDPOINT: ${{ secrets.AZURE_WHISPER_ENDPOINT }}
           AZURE_WHISPER_API_KEY: ${{ secrets.AZURE_WHISPER_API_KEY }}
 
