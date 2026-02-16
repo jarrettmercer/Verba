@@ -3,6 +3,7 @@ mod hotkey;
 mod hotkey_state;
 mod paste;
 mod permissions;
+mod pill_hover;
 mod sounds;
 mod store;
 mod transcribe;
@@ -15,12 +16,13 @@ use store::{ApiConfig, DictionaryEntry, Settings, Stats, Store, TranscriptionCon
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::PhysicalPosition;
+use tauri::PhysicalSize;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 // ===== DASHBOARD WINDOW =====
 
 fn open_dashboard_window(app: &tauri::AppHandle) {
-    // If the window already exists, just focus it
+    // If the window already exists, just focus it (dashboard shows license form when unlicensed)
     if let Some(window) = app.get_webview_window("dashboard") {
         let _ = window.show();
         let _ = window.set_focus();
@@ -44,11 +46,70 @@ fn open_dashboard_window(app: &tauri::AppHandle) {
 }
 
 #[tauri::command]
-fn open_dashboard(app: tauri::AppHandle) {
+fn open_dashboard(app: tauri::AppHandle) -> Result<(), String> {
     open_dashboard_window(&app);
+    Ok(())
+}
+
+/// Opens System Settings → Privacy & Security → Accessibility (macOS). Required for pill hover when another app is focused.
+#[tauri::command]
+fn open_accessibility_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 // ===== STATS COMMANDS =====
+
+#[tauri::command]
+fn get_license_status(store: tauri::State<'_, Store>) -> bool {
+    store.get_license_status()
+}
+
+#[tauri::command]
+fn activate_license(app: tauri::AppHandle, store: tauri::State<'_, Store>, key: String) -> Result<(), String> {
+    store.activate_license(&key)?;
+    let _ = app.emit_to("main", "license-activated", ());
+    Ok(())
+}
+
+#[tauri::command]
+fn deactivate_license(app: tauri::AppHandle, store: tauri::State<'_, Store>) -> Result<(), String> {
+    store.deactivate_license()?;
+    let _ = app.emit_to("main", "license-deactivated", ());
+    Ok(())
+}
+
+/// Called from frontend after successful activation: resize main window to pill and dock at bottom.
+/// Use scale factor so we set size in logical pixels (145x36), avoiding cut-off on Retina/HiDPI.
+#[tauri::command]
+fn finish_activation(app: tauri::AppHandle) -> Result<(), String> {
+    let main_win = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window not found".to_string())?;
+    let scale = main_win.scale_factor().unwrap_or(1.0);
+    let w = (145.0 * scale).round().max(1.0) as u32;
+    let h = (36.0 * scale).round().max(1.0) as u32;
+    main_win
+        .set_size(PhysicalSize::new(w, h))
+        .map_err(|e: tauri::Error| e.to_string())?;
+    if let Ok(Some(monitor)) = main_win.primary_monitor() {
+        if let Ok(win_size) = main_win.outer_size() {
+            let mon_pos = monitor.position();
+            let mon_size = monitor.size();
+            const MARGIN_BOTTOM: i32 = 28;
+            let x = mon_pos.x + (mon_size.width as i32 - win_size.width as i32) / 2;
+            let y = mon_pos.y + mon_size.height as i32 - win_size.height as i32 - MARGIN_BOTTOM;
+            let _ = main_win.set_position(PhysicalPosition::new(x, y));
+        }
+    }
+    Ok(())
+}
 
 #[tauri::command]
 fn get_stats(store: tauri::State<'_, Store>) -> Stats {
@@ -274,12 +335,14 @@ pub fn run() {
             permissions::check_and_request_permissions();
 
             let app_handle = app.handle().clone();
-            hotkey::start_hotkey_listener(app_handle);
+            hotkey::start_hotkey_listener(app_handle.clone());
+            pill_hover::start_pill_hover_listener(app_handle);
 
             // Build system tray
             build_tray(app)?;
 
-            // Dock pill at bottom-center of primary monitor on first load
+            // Dock pill at bottom-center; when unlicensed, open dashboard so user sees license screen (same size as dashboard)
+            let store: tauri::State<'_, Store> = app.state();
             if let Some(main_win) = app.get_webview_window("main") {
                 if let Ok(Some(monitor)) = main_win.primary_monitor() {
                     if let Ok(win_size) = main_win.outer_size() {
@@ -287,21 +350,28 @@ pub fn run() {
                         let mon_size = monitor.size();
                         const MARGIN_BOTTOM: i32 = 28;
                         let x = mon_pos.x + (mon_size.width as i32 - win_size.width as i32) / 2;
-                        // Top-left origin: place window so its top is (margin) above the bottom of the monitor
                         let y = mon_pos.y + mon_size.height as i32 - win_size.height as i32 - MARGIN_BOTTOM;
                         let _ = main_win.set_position(PhysicalPosition::new(x, y));
                     }
                 }
             }
+            if !store.get_license_status() {
+                open_dashboard_window(app.handle());
+            }
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_license_status,
+            activate_license,
+            deactivate_license,
+            finish_activation,
             audio::start_recording,
             audio::stop_recording,
             transcribe::transcribe,
             paste::paste_text,
             open_dashboard,
+            open_accessibility_settings,
             get_stats,
             record_dictation,
             clear_history,

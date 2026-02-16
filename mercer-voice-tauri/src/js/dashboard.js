@@ -535,8 +535,110 @@ async function initDashboard() {
     ]);
 }
 
+// ===== LICENSE GATE (dashboard is used for activation at same size as dashboard) =====
+const licenseScreen = document.getElementById('license-screen');
+const licenseContent = document.getElementById('dashboard-content');
+
+/** Format license key as user types: VERBA-XXXX-XXXX-XXXX-XXXX (uppercase, alphanumeric only). */
+function formatLicenseKeyInput(inputEl) {
+    if (!inputEl) return;
+    const raw = inputEl.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 21);
+    const parts = [];
+    parts.push(raw.slice(0, 5));   // VERBA
+    parts.push(raw.slice(5, 9));   // XXXX
+    parts.push(raw.slice(9, 13));
+    parts.push(raw.slice(13, 17));
+    parts.push(raw.slice(17, 21));
+    const formatted = parts.filter(Boolean).join('-');
+    const contentBefore = inputEl.value.slice(0, inputEl.selectionStart).replace(/[^A-Za-z0-9]/g, '').length;
+
+    inputEl.value = formatted;
+
+    let newPos = 0;
+    let count = 0;
+    for (let i = 0; i < formatted.length && count < contentBefore; i++) {
+        newPos = i + 1;
+        if (formatted[i] !== '-') count++;
+    }
+    inputEl.setSelectionRange(newPos, newPos);
+}
+
+// Attach formatter once so it works on first load and after Deactivate
+const licenseKeyInputEl = document.getElementById('license-key-input');
+if (licenseKeyInputEl) {
+    licenseKeyInputEl.addEventListener('input', function () {
+        formatLicenseKeyInput(licenseKeyInputEl);
+    });
+}
+
+async function checkLicenseAndInit() {
+    try {
+        const licensed = await invoke('get_license_status');
+        if (licensed) {
+            if (licenseScreen) licenseScreen.style.display = 'none';
+            if (licenseContent) licenseContent.style.display = 'flex';
+            await initDashboard();
+        } else {
+            if (licenseScreen) licenseScreen.style.display = 'flex';
+            if (licenseContent) licenseContent.style.display = 'none';
+            const input = document.getElementById('license-key-input');
+            const btn = document.getElementById('license-activate-btn');
+            const errEl = document.getElementById('license-error');
+            async function doActivate() {
+                const key = (input && input.value) ? input.value.trim() : '';
+                if (errEl) errEl.textContent = '';
+                if (!key) {
+                    if (errEl) errEl.textContent = 'Please enter a product key.';
+                    return;
+                }
+                try {
+                    await invoke('activate_license', { key });
+                    if (licenseScreen) licenseScreen.style.display = 'none';
+                    if (licenseContent) licenseContent.style.display = 'flex';
+                    await initDashboard();
+                } catch (e) {
+                    if (errEl) errEl.textContent = (e && (e.message || String(e))) || 'Invalid key.';
+                }
+            }
+            if (btn) btn.addEventListener('click', doActivate);
+            if (input) {
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doActivate(); });
+                input.focus();
+            }
+        }
+    } catch (_) {
+        if (licenseScreen) licenseScreen.style.display = 'flex';
+        if (licenseContent) licenseContent.style.display = 'none';
+    }
+}
+
+// Reset license / Deactivate — show license screen again (Settings → About)
+const btnOpenAccessibility = document.getElementById('btn-open-accessibility');
+if (btnOpenAccessibility) {
+    btnOpenAccessibility.addEventListener('click', () => {
+        invoke('open_accessibility_settings').catch(console.error);
+    });
+}
+const btnDeactivateLicense = document.getElementById('btn-deactivate-license');
+if (btnDeactivateLicense) {
+    btnDeactivateLicense.addEventListener('click', async () => {
+        try {
+            await invoke('deactivate_license');
+            if (licenseScreen) licenseScreen.style.display = 'flex';
+            if (licenseContent) licenseContent.style.display = 'none';
+            const input = document.getElementById('license-key-input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        } catch (e) {
+            console.error('Deactivate failed', e);
+        }
+    });
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDashboard);
+    document.addEventListener('DOMContentLoaded', checkLicenseAndInit);
 } else {
-    initDashboard();
+    checkLicenseAndInit();
 }

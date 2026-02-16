@@ -77,6 +77,37 @@ impl Default for TranscriptionConfig {
     }
 }
 
+/// Stored after a successful product key activation. Not the key itself.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LicenseData {
+    pub activated_at: u64,
+}
+
+/// Validates a product key. Returns Ok(()) if valid.
+/// For production, replace this with an HTTP call to your license server.
+fn validate_license_key(key: &str) -> Result<(), String> {
+    let key = key.trim().to_uppercase();
+    if key.is_empty() {
+        return Err("Please enter a product key".to_string());
+    }
+    // Development key (remove or restrict in production)
+    if key == "VERBA-DEV-KEY-0000-0000" {
+        return Ok(());
+    }
+    // Format: VERBA-XXXX-XXXX-XXXX-XXXX (4 groups of 4 alphanumeric)
+    let parts: Vec<&str> = key.split('-').collect();
+    if parts.len() != 5 || parts[0] != "VERBA" {
+        return Err("Invalid format. Use VERBA-XXXX-XXXX-XXXX-XXXX".to_string());
+    }
+    for part in parts.iter().skip(1) {
+        if part.len() != 4 || !part.chars().all(|c| c.is_ascii_alphanumeric()) {
+            return Err("Invalid format. Use VERBA-XXXX-XXXX-XXXX-XXXX".to_string());
+        }
+    }
+    // Placeholder: accept any key that matches format. Replace with server validation or checksum.
+    Ok(())
+}
+
 /// Filename for the given model size (English .en models where available).
 fn model_filename_for_size(size: &str) -> &'static str {
     match size {
@@ -385,6 +416,57 @@ impl Store {
     pub fn get_default_local_model_path(&self) -> Option<String> {
         let cfg = self.get_transcription_config();
         self.get_default_local_model_path_for_size(&cfg.local_model_size)
+    }
+
+    // --- License (product key) ---
+
+    fn license_path(&self) -> Result<PathBuf, String> {
+        self.app_data_dir
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or_else(|| "App not initialized".to_string())
+            .map(|d| d.join("license.json"))
+    }
+
+    pub fn get_license_status(&self) -> bool {
+        let path = match self.license_path() {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
+        if !path.exists() {
+            return false;
+        }
+        if let Ok(contents) = fs::read_to_string(&path) {
+            if let Ok(_data) = serde_json::from_str::<LicenseData>(&contents) {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn activate_license(&self, key: &str) -> Result<(), String> {
+        validate_license_key(key)?;
+        let path = self.license_path()?;
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let activated_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let data = LicenseData { activated_at };
+        let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+        fs::write(&path, json).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn deactivate_license(&self) -> Result<(), String> {
+        let path = self.license_path()?;
+        if path.exists() {
+            fs::remove_file(&path).map_err(|e| e.to_string())?;
+        }
+        Ok(())
     }
 }
 

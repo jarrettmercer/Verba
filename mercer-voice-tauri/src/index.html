@@ -17,6 +17,14 @@
 </head>
 <body>
 
+    <!-- Shown when not licensed; opens dashboard (same size) for product key entry -->
+    <div id="license-overlay" class="license-overlay" style="display: none;">
+        <div class="license-box">
+            <p class="license-title">Activate Verba</p>
+            <button type="button" id="license-open-dashboard-btn" class="license-btn">Open Dashboard to activate</button>
+        </div>
+    </div>
+
     <div id="pill" class="pill-overlay state-idle" role="button" tabindex="-1" title="Hold Fn or click and hold · Drag to move · Double-click to open Dashboard · Pastes into your active app">
         <div class="pill-content">
         <!-- Idle state -->

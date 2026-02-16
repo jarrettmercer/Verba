@@ -36,6 +36,21 @@ function init() {
         stateElements[s] = document.getElementById(`state-${s}`);
     });
 
+    // License gate: overlay with "Open Dashboard to activate" (dashboard has same-size license screen)
+    const licenseOverlay = document.getElementById('license-overlay');
+    const openDashboardBtn = document.getElementById('license-open-dashboard-btn');
+    if (openDashboardBtn) openDashboardBtn.addEventListener('click', () => invoke('open_dashboard').catch(() => {}));
+
+    (async function checkLicense() {
+        try {
+            const licensed = await invoke('get_license_status');
+            if (licensed) licenseOverlay.style.display = 'none';
+            else licenseOverlay.style.display = 'flex';
+        } catch (_) {
+            licenseOverlay.style.display = 'flex';
+        }
+    })();
+
     // Peel button — opens the dashboard window
     const peelBtn = document.getElementById('peel-btn');
     if (peelBtn) {
@@ -44,7 +59,7 @@ function init() {
         });
         peelBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            invoke('open_dashboard').catch(err => console.error('Failed to open dashboard:', err));
+            invoke('open_dashboard').catch(() => {});
         });
     }
 
@@ -88,7 +103,7 @@ function init() {
             const dy = e.clientY - lastTapY;
             if (now - lastTapAt <= DOUBLE_TAP_MS && (dx * dx + dy * dy) <= DOUBLE_TAP_MAX_DIST * DOUBLE_TAP_MAX_DIST) {
                 lastTapAt = 0;
-                invoke('open_dashboard').catch(err => console.error('Failed to open dashboard:', err));
+                invoke('open_dashboard').catch(() => {});
             } else {
                 lastTapAt = now;
                 lastTapX = e.clientX;
@@ -118,6 +133,16 @@ function init() {
     listen('hotkey-released', () => {
         console.log('[Verba] hotkey-released received');
         onHotkeyReleased();
+    });
+    listen('license-activated', () => {
+        if (licenseOverlay) licenseOverlay.style.display = 'none';
+    });
+    listen('license-deactivated', () => {
+        if (licenseOverlay) licenseOverlay.style.display = 'flex';
+    });
+    listen('pill-cursor-over', (event) => {
+        const over = event.payload === true;
+        if (pill) pill.classList.toggle('cursor-over', over && currentState === 'idle');
     });
     listen('audio-level', (event) => onAudioLevel(event.payload));
     listen('recording-started', () => {

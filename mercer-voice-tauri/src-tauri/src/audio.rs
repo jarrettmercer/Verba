@@ -1,3 +1,4 @@
+use crate::store::Store;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use hound::{WavSpec, WavWriter};
 use serde::Serialize;
@@ -32,6 +33,10 @@ fn emit_recording_failed(app: &AppHandle, msg: &str) {
 
 /// Called from both the Tauri command (frontend) and the hotkey handler (backend-only flow).
 pub fn start_recording_impl(app: &AppHandle) -> Result<(), String> {
+    let store = app.state::<Store>();
+    if !store.get_license_status() {
+        return Err("Please activate with a product key first".to_string());
+    }
     let state = app.state::<AudioState>();
     do_start_recording(app.clone(), state)
 }
@@ -199,6 +204,10 @@ fn do_start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<()
 
 #[tauri::command]
 pub fn start_recording(app: AppHandle, state: State<'_, AudioState>) -> Result<(), String> {
+    let store = app.state::<Store>();
+    if !store.get_license_status() {
+        return Err("Please activate with a product key first".to_string());
+    }
     do_start_recording(app, state)
 }
 

@@ -10,7 +10,18 @@
 </head>
 <body>
 
-    <div class="dashboard">
+    <!-- License / activation screen (same size as dashboard; shown when not activated) -->
+    <div id="license-screen" class="license-screen" style="display: none;">
+        <div class="license-screen-box">
+            <h1 class="license-screen-title">Activate Verba</h1>
+            <p class="license-screen-hint">Enter your product key to use voice dictation.</p>
+            <input type="text" id="license-key-input" class="license-screen-input" placeholder="VERBA-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" />
+            <p id="license-error" class="license-screen-error" aria-live="polite"></p>
+            <button type="button" id="license-activate-btn" class="btn btn-primary license-screen-btn">Activate</button>
+        </div>
+    </div>
+
+    <div class="dashboard" id="dashboard-content">
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
@@ -362,6 +373,20 @@
                             <div class="setting-name">Verba</div>
                             <div class="setting-description">Version 0.1.0 — Voice dictation for your desktop</div>
                         </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-name">Pill hover when another app is focused</div>
+                            <div class="setting-description">On Mac, the pill can expand on hover even when you're in another app. This requires Accessibility permission — add Verba in System Settings → Privacy &amp; Security → Accessibility.</div>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-sm" id="btn-open-accessibility">Open Accessibility Settings</button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-name">Reset license</div>
+                            <div class="setting-description">Deactivate this install and show the product key screen again (e.g. to test activation).</div>
+                        </div>
+                        <button type="button" class="btn btn-ghost btn-sm" id="btn-deactivate-license">Deactivate</button>
                     </div>
                 </div>
             </section>
