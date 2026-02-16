@@ -1,0 +1,35 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+*:focus,
+*:focus-visible,
+*:focus-within,
+*:active {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-color: transparent !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    background-color: transparent;
+    outline: none;
+    color: var(--colors--white);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: var(--font-size--text-default);
+    line-height: var(--line-height--text-default);
+    font-weight: 400;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

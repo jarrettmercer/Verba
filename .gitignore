@@ -10,6 +10,9 @@ bld/
 .DS_Store
 *.app
 
+## IDE
+.idea/
+
 ## Secrets
 appsettings.*.json
 !appsettings.json
@@ -23,3 +26,6 @@ target/
 
 ## Tauri
 src-tauri/gen/schemas/
+
+## Electron compiled helpers
+mercer-voice-electron/helpers/fn-key-tap

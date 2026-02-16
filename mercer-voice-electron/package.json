@@ -1,0 +1,35 @@
+{
+  "name": "verba",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "prestart": "node scripts/postinstall.js",
+    "start": "ELECTRON_RUN_AS_NODE= electron .",
+    "dev": "ELECTRON_RUN_AS_NODE= electron ."
+  },
+  "build": {
+    "appId": "com.mercer.verba",
+    "productName": "Verba",
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "icon": "build/icon.png"
+    }
+  },
+  "dependencies": {
+    "@kutalia/whisper-node-addon": "^1.1.0",
+    "electron-store": "^8.1.0",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^40.4.1"
+  }
+}
