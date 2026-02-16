@@ -323,9 +323,7 @@ function showToast(message, opts = {}) {
         actionBtn.onclick = null;
     }
 
-    // Hide the pill and resize window
-    const pillEl = document.getElementById('pill');
-    if (pillEl) pillEl.style.display = 'none';
+    // Resize window to fit toast + pill stacked
     if (typeof send === 'function') send('toast-show');
 
     // Show with animation
@@ -357,8 +355,6 @@ function hideToast() {
     toast.classList.remove('toast-visible');
     setTimeout(() => {
         toast.style.display = 'none';
-        const pillEl = document.getElementById('pill');
-        if (pillEl) pillEl.style.display = '';
         if (typeof send === 'function') send('toast-hide');
     }, 300);
 }

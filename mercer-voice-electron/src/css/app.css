@@ -330,19 +330,28 @@
     text-align: center;
 }
 
+/* ===== PILL STACK — vertical column: toast above pill ===== */
+.pill-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 2px;
+}
+
 /* ===== TOAST NOTIFICATION ===== */
 .toast {
-    width: 320px;
+    width: 360px;
     background: rgba(28, 28, 30, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 14px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(255, 255, 255, 0.06);
     z-index: 500;
     overflow: hidden;
     opacity: 0;
-    transform: translateY(6px) scale(0.97);
+    transform: translateY(8px) scale(0.96);
     transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: auto;
 }
@@ -353,14 +362,14 @@
 .toast-body {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
+    gap: 12px;
+    padding: 13px 16px;
 }
 .toast-icon {
     flex-shrink: 0;
     color: var(--colors--primary, #a78bfa);
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 .toast-icon.toast-icon-error {
     color: var(--color-error, #f87171);
@@ -370,18 +379,18 @@
 }
 .toast-message {
     flex: 1;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--colors--white, #fafafa);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.01em;
-    line-height: 1.3;
+    line-height: 1.35;
 }
 .toast-action {
     flex-shrink: 0;
-    padding: 5px 14px;
+    padding: 6px 16px;
     font-size: 13px;
     font-weight: 500;
     color: var(--colors--white, #fafafa);
@@ -406,7 +415,7 @@
 .toast-progress-bar {
     height: 100%;
     width: 100%;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.45);
     border-radius: 0 0 0 2px;
     transform-origin: left center;
     transition: none;

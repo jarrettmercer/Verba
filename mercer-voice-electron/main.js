@@ -452,19 +452,19 @@ function registerIpcHandlers() {
     dragOffset = null;
   });
 
-  // Toast resize — expand window to fit toast, shrink back when dismissed
+  // Toast resize — expand window to fit toast above pill, shrink back when dismissed
   const PILL_W = 145, PILL_H = 36;
-  const TOAST_W = 340, TOAST_H = 58;
+  const TOAST_STACK_W = 380, TOAST_STACK_H = 106;
   const MARGIN_BOTTOM = 28;
 
   ipcMain.on('toast-show', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     const primary = screen.getPrimaryDisplay();
     mainWindow.setBounds({
-      x: Math.floor(primary.bounds.x + (primary.size.width - TOAST_W) / 2),
-      y: Math.floor(primary.bounds.y + primary.size.height - TOAST_H - MARGIN_BOTTOM),
-      width: TOAST_W,
-      height: TOAST_H,
+      x: Math.floor(primary.bounds.x + (primary.size.width - TOAST_STACK_W) / 2),
+      y: Math.floor(primary.bounds.y + primary.size.height - TOAST_STACK_H - MARGIN_BOTTOM),
+      width: TOAST_STACK_W,
+      height: TOAST_STACK_H,
     });
   });
 
