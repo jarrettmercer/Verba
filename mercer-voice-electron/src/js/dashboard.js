@@ -345,6 +345,7 @@ const fnKeyNote = document.getElementById('fn-key-note');
         { value: 'F7', label: 'F7' },
         { value: 'F8', label: 'F8' },
     ] : [
+        { value: 'RightControl', label: 'Right Ctrl (Push to Talk)' },
         { value: 'Control+Shift+Space', label: 'Ctrl + Shift + Space' },
         { value: 'Alt+Shift+Space', label: 'Alt + Shift + Space' },
         { value: 'Control+Alt+Space', label: 'Ctrl + Alt + Space' },
@@ -373,7 +374,21 @@ const fnKeyNote = document.getElementById('fn-key-note');
 
 function updateFnKeyNote() {
     if (fnKeyNote) {
-        fnKeyNote.style.display = (hotkeySelect && hotkeySelect.value === 'Fn') ? '' : 'none';
+        const val = hotkeySelect && hotkeySelect.value;
+        if (val === 'Fn') {
+            fnKeyNote.style.display = '';
+        } else if (val === 'RightControl') {
+            fnKeyNote.style.display = '';
+            // Re-use the note row but update its content for Windows push-to-talk
+            const nameEl = fnKeyNote.querySelector('.setting-name');
+            const descEl = fnKeyNote.querySelector('.setting-description');
+            const btnEl = fnKeyNote.querySelector('#btn-open-keyboard-settings');
+            if (nameEl) nameEl.textContent = 'Push to Talk';
+            if (descEl) descEl.textContent = 'Hold the Right Ctrl key to record, release to stop and transcribe. The left Ctrl key is unaffected.';
+            if (btnEl) btnEl.style.display = 'none';
+        } else {
+            fnKeyNote.style.display = 'none';
+        }
     }
 }
 

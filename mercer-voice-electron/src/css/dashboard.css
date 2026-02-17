@@ -913,6 +913,11 @@ html, body {
     padding-right: 32px;
 }
 
+.setting-select option {
+    background: #1a1a1e;
+    color: #fafafa;
+}
+
 .api-key-row {
     display: flex;
     gap: 8px;

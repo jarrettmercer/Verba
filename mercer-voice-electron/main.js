@@ -113,6 +113,7 @@ let hotkeyRecording = false;
 let lastRegisteredAccelerator = null;
 let hotkeyRegistered = false;
 let fnTapProcess = null;
+let rctrlHookProcess = null;
 
 function getFrontmostAppBundleIdAsync(callback) {
   if (process.platform !== 'darwin') { callback(null); return; }
@@ -217,6 +218,55 @@ function stopFnKeyTap() {
   }
 }
 
+// ---- Right Ctrl key via low-level keyboard hook (Windows, hold-to-record) ----
+
+function startRCtrlHook() {
+  if (process.platform !== 'win32') return false;
+  const helperPath = path.join(__dirname, 'helpers', 'rctrl-hook.ps1');
+  if (!fs.existsSync(helperPath)) {
+    console.warn('[Verba] rctrl-hook.ps1 not found at', helperPath);
+    return false;
+  }
+
+  stopRCtrlHook();
+
+  rctrlHookProcess = spawn('powershell', [
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helperPath,
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+  let lineBuffer = '';
+  rctrlHookProcess.stdout.on('data', (data) => {
+    lineBuffer += data.toString();
+    const lines = lineBuffer.split('\n');
+    lineBuffer = lines.pop();
+    for (const line of lines) {
+      const cmd = line.trim();
+      if (cmd === 'PRESS') onHotkeyPress();
+      else if (cmd === 'RELEASE') onHotkeyRelease();
+    }
+  });
+
+  rctrlHookProcess.stderr.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg) console.log('[Verba][rctrl-hook]', msg);
+  });
+
+  rctrlHookProcess.on('exit', (code) => {
+    console.log('[Verba] rctrl-hook exited with code', code);
+    rctrlHookProcess = null;
+  });
+
+  console.log('[Verba] Right Ctrl hook started (low-level keyboard hook, hold-to-record)');
+  return true;
+}
+
+function stopRCtrlHook() {
+  if (rctrlHookProcess) {
+    rctrlHookProcess.kill();
+    rctrlHookProcess = null;
+  }
+}
+
 // ---- Accessibility check ----
 function requestAccessibilityIfNeeded() {
   if (process.platform !== 'darwin') return;
@@ -249,6 +299,7 @@ function getHotkeyAccelerators() {
 function registerHotkey() {
   globalShortcut.unregisterAll();
   stopFnKeyTap();
+  stopRCtrlHook();
   lastRegisteredAccelerator = null;
 
   const preferred = (store.getSettings().hotkey_accelerator || '').trim();
@@ -261,6 +312,15 @@ function registerHotkey() {
       return true;
     }
     console.warn('[Verba] Fn key tap failed, falling back to keyboard shortcut');
+  }
+
+  // Right Control: use low-level keyboard hook for hold-to-record (Windows)
+  if (preferred === 'RightControl' && process.platform === 'win32') {
+    if (startRCtrlHook()) {
+      lastRegisteredAccelerator = 'RightControl';
+      return true;
+    }
+    console.warn('[Verba] RCtrl hook failed, falling back to keyboard shortcut');
   }
 
   const accelerators = getHotkeyAccelerators();
@@ -604,6 +664,7 @@ app.whenReady().then(() => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopFnKeyTap();
+  stopRCtrlHook();
 });
 
 app.on('window-all-closed', () => {
