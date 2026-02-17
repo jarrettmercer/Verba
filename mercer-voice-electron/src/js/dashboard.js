@@ -1,5 +1,4 @@
-const { invoke } = window.__TAURI__.core;
-const { listen } = window.__TAURI__.event;
+const { invoke, listen } = window.api;
 
 // ===== TAB NAVIGATION =====
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -267,7 +266,7 @@ window.copyHistoryText = async function(index) {
     try {
         await navigator.clipboard.writeText(entry.text);
     } catch (_) {
-        // Fallback: invoke Rust to copy
+        // Fallback: invoke main process to copy
         try {
             await invoke('paste_text', { text: entry.text, targetBundleId: null });
         } catch (e) {

@@ -1,14 +1,14 @@
 (function checkApi() {
-    if (!window.__TAURI__?.core?.invoke) {
+    if (!window.api?.invoke) {
         console.error('[Verba] Preload API missing — pill will not work. Restart the app.');
         var el = document.getElementById('api-error-overlay');
         if (el) el.style.display = 'flex';
         return;
     }
 })();
-const invoke = window.__TAURI__?.core?.invoke ?? (() => Promise.reject(new Error('API not loaded')));
-const send = window.__TAURI__?.core?.send ?? (() => {});
-const listen = window.__TAURI__?.event?.listen ?? (() => () => {});
+const invoke = window.api?.invoke ?? (() => Promise.reject(new Error('API not loaded')));
+const send = window.api?.send ?? (() => {});
+const listen = window.api?.listen ?? (() => () => {});
 
 const states = ['idle', 'recording', 'transcribing', 'error'];
 let currentState = 'idle';
@@ -33,7 +33,7 @@ const stateElements = {};
 let stopAudioCapture = null;
 let soundsEnabled = true;
 
-// Feedback sounds — matches Tauri's sounds.rs exactly
+// Feedback sounds
 const SOUND_SAMPLE_RATE = 48000;
 const SOUND_VOLUME = 0.24;
 

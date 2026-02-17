@@ -1,6 +1,6 @@
 import Cocoa
 
-// Fn/Globe key constants (same as Tauri's hotkey.rs)
+// Fn/Globe key constants
 let KVK_FUNCTION: Int64 = 0x3F
 let FN_FLAG_MASK: UInt64 = 0x0080_0000
 

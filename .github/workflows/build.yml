@@ -7,7 +7,7 @@ on:
 
 defaults:
   run:
-    working-directory: mercer-voice-tauri
+    working-directory: mercer-voice-electron
 
 jobs:
   build-macos:
@@ -17,14 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: mercer-voice-tauri/src-tauri
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -32,28 +24,3 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
-
-      # Force whisper-rs-sys to reconfigure so CMake picks up CFLAGS/CMAKE_C_FLAGS (i8mm)
-      - name: Clear whisper-rs-sys build cache
-        run: rm -rf src-tauri/target/release/build/whisper-rs-sys-*
-
-      - name: Build Tauri app
-        run: npm run tauri:build
-        env:
-          CI: "true"
-          # ggml ARM quants need i8mm; set so whisper-rs-sys CMake build uses them
-          CFLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
-          CXXFLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
-          CMAKE_C_FLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
-          CMAKE_CXX_FLAGS: "-mmacosx-version-min=10.15 -march=armv8.2-a+dotprod+i8mm"
-          AZURE_WHISPER_ENDPOINT: ${{ secrets.AZURE_WHISPER_ENDPOINT }}
-          AZURE_WHISPER_API_KEY: ${{ secrets.AZURE_WHISPER_API_KEY }}
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Verba-macOS
-          path: |
-            mercer-voice-tauri/src-tauri/target/release/bundle/dmg/*.dmg
-            mercer-voice-tauri/src-tauri/target/release/bundle/macos/*.app
-          if-no-files-found: error

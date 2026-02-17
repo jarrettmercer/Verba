@@ -3,8 +3,8 @@
 [Rr]elease/
 x64/
 x86/
-build/
 bld/
+dist/
 
 ## macOS
 .DS_Store
@@ -20,12 +20,6 @@ appsettings.*.json
 
 ## Node.js
 node_modules/
-
-## Rust
-target/
-
-## Tauri
-src-tauri/gen/schemas/
 
 ## Electron compiled helpers
 mercer-voice-electron/helpers/fn-key-tap
