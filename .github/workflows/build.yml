@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Build and publish to GitHub Releases
-        run: npm run release
+        run: npm run release -- --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -50,6 +50,6 @@ jobs:
         run: npm ci
 
       - name: Build and publish to GitHub Releases
-        run: npm run release
+        run: npm run release -- --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
