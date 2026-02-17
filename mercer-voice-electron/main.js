@@ -175,7 +175,7 @@ function toggleHotkey() {
 
 function startFnKeyTap() {
   if (process.platform !== 'darwin') return false;
-  const helperPath = path.join(__dirname, 'helpers', 'fn-key-tap');
+  const helperPath = path.join(__dirname, 'helpers', 'fn-key-tap').replace('app.asar', 'app.asar.unpacked');
   if (!fs.existsSync(helperPath)) {
     console.warn('[Verba] fn-key-tap helper not found at', helperPath);
     return false;
@@ -222,7 +222,7 @@ function stopFnKeyTap() {
 
 function startRCtrlHook() {
   if (process.platform !== 'win32') return false;
-  const helperPath = path.join(__dirname, 'helpers', 'rctrl-hook.ps1');
+  const helperPath = path.join(__dirname, 'helpers', 'rctrl-hook.ps1').replace('app.asar', 'app.asar.unpacked');
   if (!fs.existsSync(helperPath)) {
     console.warn('[Verba] rctrl-hook.ps1 not found at', helperPath);
     return false;

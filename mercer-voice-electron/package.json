@@ -46,6 +46,9 @@
       ],
       "artifactName": "${productName}-${version}-mac.${ext}"
     },
+    "asarUnpack": [
+      "helpers/**"
+    ],
     "publish": {
       "provider": "github",
       "owner": "jarrettmercer",
