@@ -1,6 +1,8 @@
 {
   "name": "verba",
   "version": "1.0.0",
+  "description": "A voice assistant application",
+  "author": "Jarrett Mercer",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -8,12 +10,20 @@
     "prestart": "node scripts/postinstall.js",
     "start": "ELECTRON_RUN_AS_NODE= electron .",
     "dev": "ELECTRON_RUN_AS_NODE= electron .",
-    "build": "electron-builder --mac",
-    "release": "electron-builder --mac --publish always"
+    "build": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "release": "electron-builder --win --publish always",
+    "release:mac": "electron-builder --mac --publish always"
   },
   "build": {
     "appId": "com.mercer.verba",
     "productName": "Verba",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
