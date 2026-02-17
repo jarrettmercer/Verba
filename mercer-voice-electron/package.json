@@ -49,4 +49,16 @@
     "electron": "^40.4.1",
     "electron-builder": "^26.7.0"
   }
+
+  "scripts": {
+  "postinstall": "node scripts/postinstall.js",
+  "prestart": "node scripts/postinstall.js",
+  "start": "ELECTRON_RUN_AS_NODE= electron .",
+  "dev": "ELECTRON_RUN_AS_NODE= electron .",
+  "build": "electron-builder --win",
+  "build:mac": "electron-builder --mac",
+  "release": "electron-builder --mac --win --publish always",
+  "release:mac": "electron-builder --mac --publish always",
+  "release:win": "electron-builder --win --publish always"
+}
 }
