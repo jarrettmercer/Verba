@@ -21,10 +21,21 @@
     "productName": "Verba",
     "win": {
       "target": [
-        "nsis",
-        "portable"
-      ],
-      "artifactName": "${productName}-${version}-win.${ext}"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-win-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-portable.${ext}"
     },
     "mac": {
       "icon": "build/icon.icns",
