@@ -77,6 +77,19 @@
         <!-- Main content area -->
         <main class="main-content">
 
+            <!-- Update banner (hidden until an update is downloaded) -->
+            <div id="update-banner" class="update-banner" style="display: none;">
+                <div class="update-banner-content">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span id="update-banner-text">A new version of Verba is available.</span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-restart-update">Restart to update</button>
+            </div>
+
             <!-- ===== STATS TAB ===== -->
             <section id="tab-stats" class="tab-panel active">
                 <div class="tab-header">

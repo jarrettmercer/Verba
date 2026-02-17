@@ -575,6 +575,29 @@ listen('stats-updated', () => {
     loadHistory();
 });
 
+// ===== AUTO-UPDATE NOTIFICATIONS =====
+const updateBanner = document.getElementById('update-banner');
+const updateBannerText = document.getElementById('update-banner-text');
+const btnRestartUpdate = document.getElementById('btn-restart-update');
+
+listen('update-downloaded', (event) => {
+    const version = event.payload && event.payload.version;
+    if (updateBannerText) {
+        updateBannerText.textContent = version
+            ? `Verba v${version} is ready to install.`
+            : 'A new version of Verba is ready to install.';
+    }
+    if (updateBanner) updateBanner.style.display = 'flex';
+});
+
+if (btnRestartUpdate) {
+    btnRestartUpdate.addEventListener('click', () => {
+        invoke('install-update').catch((err) => {
+            console.error('Failed to install update:', err);
+        });
+    });
+}
+
 // ===== INIT =====
 async function initDashboard() {
     await Promise.all([

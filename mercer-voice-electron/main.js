@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeI
 const path = require('path');
 const fs = require('fs');
 const { exec, execSync, spawn } = require('child_process');
+const { autoUpdater } = require('electron-updater');
 const Store = require('./store.js');
 const { transcribe } = require('./transcribe.js');
 const { pasteText } = require('./paste.js');
@@ -440,6 +441,11 @@ function registerIpcHandlers() {
     return downloadLocalModel(app, dashboardWindow, store, size);
   });
 
+  // Auto-update
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall();
+  });
+
   // Window drag
   ipcMain.on('window-drag-start', (_, { offsetX, offsetY }) => {
     dragOffset = { x: offsetX, y: offsetY };
@@ -545,6 +551,52 @@ app.whenReady().then(() => {
       if (!granted) console.log('[Verba] Microphone access not yet granted — enable in System Settings → Privacy & Security → Microphone.');
     }).catch(() => {});
   }
+
+  // Auto-update: check after a short delay, then periodically
+  autoUpdater.logger = console;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  function sendUpdateStatus(channel, payload) {
+    const windows = [dashboardWindow, mainWindow];
+    for (const win of windows) {
+      if (win && !win.isDestroyed()) {
+        try { win.webContents.send(channel, payload); } catch (_) {}
+      }
+    }
+  }
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[Verba] Update available:', info.version);
+    sendUpdateStatus('update-available', { version: info.version });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus('update-download-progress', {
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[Verba] Update downloaded:', info.version);
+    sendUpdateStatus('update-downloaded', { version: info.version });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[Verba] Auto-update error:', err.message);
+  });
+
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.log('[Verba] Update check failed:', err.message);
+    });
+  }, 10000);
+
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 30 * 60 * 1000);
 });
 
 app.on('will-quit', () => {

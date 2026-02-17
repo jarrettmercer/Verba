@@ -1002,3 +1002,27 @@ kbd {
         flex: 1;
     }
 }
+
+/* ===== UPDATE BANNER ===== */
+.update-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    background: rgba(167, 139, 250, 0.10);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.update-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--colors--primary);
+}
+.update-banner-content svg {
+    flex-shrink: 0;
+}

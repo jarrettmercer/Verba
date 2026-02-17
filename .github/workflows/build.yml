@@ -1,18 +1,22 @@
-name: Build
+name: Build & Release
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    tags:
+      - "v*"
 
 defaults:
   run:
     working-directory: mercer-voice-electron
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
-    name: Build (macOS)
+    name: Build & Publish (macOS)
 
     steps:
       - uses: actions/checkout@v4
@@ -24,3 +28,8 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
+
+      - name: Build and publish to GitHub Releases
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
