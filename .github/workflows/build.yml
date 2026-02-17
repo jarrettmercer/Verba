@@ -18,9 +18,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          # macOS build job
+          - os: macos-latest
+            release_cmd: npm run release:mac
+          # Windows build job
+          - os: windows-latest
+            release_cmd: npm run release:win
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout the repository
+        uses: actions/checkout@v4
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -30,12 +37,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build & Publish
-        run: |
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run release:mac
-          else
-            npm run release:win
-          fi
+      - name: Build & Publish Release
+        run: ${{ matrix.release_cmd }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
