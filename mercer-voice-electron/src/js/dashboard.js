@@ -1,4 +1,6 @@
-const { invoke, listen } = window.api;
+const { invoke, listen, platform } = window.api;
+const isMac = platform === 'darwin';
+const isWindows = platform === 'win32';
 
 // ===== TAB NAVIGATION =====
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -329,6 +331,46 @@ const hotkeySelect = document.getElementById('hotkey-select');
 const hotkeyStatus = document.getElementById('hotkey-status');
 const fnKeyNote = document.getElementById('fn-key-note');
 
+// Populate hotkey options based on platform
+(function populateHotkeyOptions() {
+    if (!hotkeySelect) return;
+    const options = isMac ? [
+        { value: 'Fn', label: 'Fn (Globe key)' },
+        { value: 'Command+Shift+Space', label: 'Cmd + Shift + Space' },
+        { value: 'Control+Option+Space', label: 'Ctrl + Opt + Space' },
+        { value: 'Command+Option+Space', label: 'Cmd + Opt + Space' },
+        { value: 'Command+Shift+V', label: 'Cmd + Shift + V' },
+        { value: 'F5', label: 'F5' },
+        { value: 'F6', label: 'F6' },
+        { value: 'F7', label: 'F7' },
+        { value: 'F8', label: 'F8' },
+    ] : [
+        { value: 'Control+Shift+Space', label: 'Ctrl + Shift + Space' },
+        { value: 'Alt+Shift+Space', label: 'Alt + Shift + Space' },
+        { value: 'Control+Alt+Space', label: 'Ctrl + Alt + Space' },
+        { value: 'Control+Shift+V', label: 'Ctrl + Shift + V' },
+        { value: 'F5', label: 'F5' },
+        { value: 'F6', label: 'F6' },
+        { value: 'F7', label: 'F7' },
+        { value: 'F8', label: 'F8' },
+    ];
+    hotkeySelect.innerHTML = '';
+    options.forEach(({ value, label }) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        hotkeySelect.appendChild(opt);
+    });
+
+    // Platform-specific hint text
+    const hintEl = document.getElementById('hotkey-platform-hint');
+    if (hintEl) {
+        hintEl.textContent = isMac
+            ? 'On Mac, if the shortcut doesn\'t work when another app is focused, add Verba (or Electron) in System Settings \u2192 Privacy & Security \u2192 Accessibility.'
+            : 'If the shortcut conflicts with another app, try a different combination.';
+    }
+})();
+
 function updateFnKeyNote() {
     if (fnKeyNote) {
         fnKeyNote.style.display = (hotkeySelect && hotkeySelect.value === 'Fn') ? '' : 'none';
@@ -597,6 +639,23 @@ if (btnRestartUpdate) {
         });
     });
 }
+
+// ===== PLATFORM-SPECIFIC UI =====
+(function adjustPlatformUI() {
+    if (!isMac) {
+        // Hide Mac-only settings rows on Windows/Linux
+        const rowAccessibility = document.getElementById('row-accessibility');
+        if (rowAccessibility) rowAccessibility.style.display = 'none';
+
+        // Simplify microphone description for Windows
+        const micDesc = document.getElementById('microphone-description');
+        if (micDesc) micDesc.textContent = 'Verba needs microphone access. Windows should prompt you automatically when you first record.';
+
+        // Hide "Open Microphone Settings" button (Mac-only System Settings)
+        const btnOpenMic = document.getElementById('btn-open-microphone');
+        if (btnOpenMic) btnOpenMic.style.display = 'none';
+    }
+})();
 
 // ===== INIT =====
 async function initDashboard() {

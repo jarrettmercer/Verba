@@ -276,7 +276,7 @@
 
                 <div class="settings-section">
                     <h3>Transcription</h3>
-                    <p class="settings-section-desc">Choose where speech-to-text runs: in the cloud (Azure) or on this Mac (local model).</p>
+                    <p class="settings-section-desc">Choose where speech-to-text runs: in the cloud (Azure) or locally on this device (local model).</p>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-name">Source</div>
@@ -289,7 +289,7 @@
                             </label>
                             <label class="source-option">
                                 <input type="radio" name="transcription-source" value="local" id="source-local" />
-                                <span>Local (this Mac)</span>
+                                <span>Local (this device)</span>
                             </label>
                         </div>
                     </div>
@@ -372,18 +372,10 @@
                             <div class="setting-description" id="hotkey-description">
                                 Press once to start recording, press again to stop and transcribe.
                             </div>
-                            <p class="setting-description" style="margin-top:4px; font-size:11px; color:var(--colors--gray);">On Mac, if the shortcut doesn’t work when another app is focused, add Verba (or Electron) in System Settings → Privacy &amp; Security → Accessibility.</p>
+                            <p class="setting-description" id="hotkey-platform-hint" style="margin-top:4px; font-size:11px; color:var(--colors--gray);"></p>
                         </div>
                         <select id="hotkey-select" class="setting-input setting-select" style="max-width:220px;">
-                            <option value="Fn">Fn (Globe key)</option>
-                            <option value="Command+Shift+Space">Cmd + Shift + Space</option>
-                            <option value="Control+Option+Space">Ctrl + Opt + Space</option>
-                            <option value="Command+Option+Space">Cmd + Opt + Space</option>
-                            <option value="Command+Shift+V">Cmd + Shift + V</option>
-                            <option value="F5">F5</option>
-                            <option value="F6">F6</option>
-                            <option value="F7">F7</option>
-                            <option value="F8">F8</option>
+                            <!-- Options populated dynamically by dashboard.js based on platform -->
                         </select>
                         <p id="hotkey-status" class="setting-description" style="margin-top:6px;"></p>
                     </div>
@@ -404,17 +396,17 @@
                             <div class="setting-description">Version 1.0.0 — Voice dictation for your desktop</div>
                         </div>
                     </div>
-                    <div class="setting-row">
+                    <div class="setting-row" id="row-accessibility">
                         <div class="setting-info">
                             <div class="setting-name">Pill hover when another app is focused</div>
                             <div class="setting-description">On Mac, the pill can expand on hover even when you're in another app. This requires Accessibility permission — add Verba in System Settings → Privacy &amp; Security → Accessibility.</div>
                         </div>
                         <button type="button" class="btn btn-ghost btn-sm" id="btn-open-accessibility">Open Accessibility Settings</button>
                     </div>
-                    <div class="setting-row">
+                    <div class="setting-row" id="row-microphone">
                         <div class="setting-info">
                             <div class="setting-name">Microphone</div>
-                            <div class="setting-description">Verba needs microphone access. Click "Request access" below. In development mode the app appears as "Electron" in System Settings &gt; Privacy &amp; Security &gt; Microphone — make sure it is enabled. If recording fails, open Microphone Settings and toggle Electron off then on, then restart Verba.</div>
+                            <div class="setting-description" id="microphone-description">Verba needs microphone access. Click "Request access" below.</div>
                         </div>
                         <div class="setting-buttons">
                             <button type="button" class="btn btn-primary btn-sm" id="btn-request-microphone">Request access</button>

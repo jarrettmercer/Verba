@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on(channel, sub);
     return () => ipcRenderer.removeListener(channel, sub);
   },
+  platform: process.platform,
 });

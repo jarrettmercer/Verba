@@ -37,8 +37,9 @@ function createMainWindow() {
     hasShadow: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    show: true,
+    show: false,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    ...(process.platform === 'win32' ? { backgroundColor: '#00000000', thickFrame: false } : {}),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -59,6 +60,7 @@ function createMainWindow() {
     height: h,
   });
 
+  win.once('ready-to-show', () => { win.show(); });
   win.on('closed', () => { mainWindow = null; });
   return win;
 }

@@ -11,9 +11,10 @@ function pasteText(text, targetBundleId) {
   clipboard.writeText(t);
 
   const bid = targetBundleId && typeof targetBundleId === 'string' ? targetBundleId.trim() : null;
-  const doKeystroke = !!bid && bid !== '' && bid.toLowerCase() !== 'missing value' && bid !== VERBA_BUNDLE_ID;
+  const hasMacTarget = !!bid && bid !== '' && bid.toLowerCase() !== 'missing value' && bid !== VERBA_BUNDLE_ID;
 
-  if (!doKeystroke) {
+  // On Windows we always try to paste (no bundle ID needed, just Ctrl+V into the foreground app)
+  if (!hasMacTarget && process.platform !== 'win32') {
     console.log('[Verba] Paste: no target app, clipboard set only');
     return;
   }
@@ -37,6 +38,25 @@ function pasteText(text, targetBundleId) {
           console.log('[Verba] Paste: Cmd+V sent');
         } catch (e) {
           console.warn('[Verba] Paste: keystroke failed (grant Accessibility?)', e.message);
+        }
+        resolve();
+      }, 200);
+    });
+  }
+
+  if (process.platform === 'win32') {
+    // On Windows, send Ctrl+V using PowerShell and .NET SendKeys
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        try {
+          console.log('[Verba] Paste: sending Ctrl+V on Windows');
+          execSync(
+            'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\'^v\')"',
+            { timeout: 5000, windowsHide: true }
+          );
+          console.log('[Verba] Paste: Ctrl+V sent');
+        } catch (e) {
+          console.warn('[Verba] Paste: SendKeys failed', e.message);
         }
         resolve();
       }, 200);
