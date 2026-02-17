@@ -1,6 +1,6 @@
 {
   "name": "verba",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "A voice assistant application",
   "author": "Jarrett Mercer",
   "private": true,
@@ -38,7 +38,8 @@
     "publish": {
       "provider": "github",
       "owner": "jarrettmercer",
-      "repo": "MercerVoice"
+      "repo": "MercerVoice",
+      "releaseType": "release"
     }
   },
   "dependencies": {

@@ -34,6 +34,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Sync package.json version from tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          if [ -n "$TAG" ] && [ "$TAG" != "$GITHUB_REF" ]; then
+            npm version "$TAG" --no-git-tag-version --allow-same-version
+          fi
+        shell: bash
+
       - name: Install npm dependencies
         run: npm ci
 
