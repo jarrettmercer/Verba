@@ -372,18 +372,6 @@ function registerIpcHandlers() {
   // Recording
   ipcMain.handle('start_recording', async () => {
     if (!store.getLicenseStatus()) return Promise.reject(new Error('Please activate with a product key first'));
-    if (process.platform === 'darwin') {
-      try {
-        const granted = await systemPreferences.askForMediaAccess('microphone');
-        if (!granted) {
-          if (mainWindow) mainWindow.webContents.send('recording-failed', 'Microphone access was denied. Enable it in System Settings → Privacy & Security → Microphone.');
-          return Promise.reject(new Error('Microphone access denied'));
-        }
-      } catch (err) {
-        if (mainWindow) mainWindow.webContents.send('recording-failed', err.message || 'Microphone access failed');
-        return Promise.reject(err);
-      }
-    }
     if (mainWindow) mainWindow.webContents.send('recording-started');
     return Promise.resolve();
   });
@@ -606,13 +594,6 @@ app.whenReady().then(() => {
   mainWindow.webContents.on('did-finish-load', () => {
     if (!store.getLicenseStatus()) createDashboardWindow();
   });
-
-  // Request microphone access at startup
-  if (process.platform === 'darwin') {
-    systemPreferences.askForMediaAccess('microphone').then((granted) => {
-      if (!granted) console.log('[Verba] Microphone access not yet granted — enable in System Settings → Privacy & Security → Microphone.');
-    }).catch(() => {});
-  }
 
   // Auto-update: check after a short delay, then periodically
   autoUpdater.logger = console;
