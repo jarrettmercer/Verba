@@ -466,6 +466,8 @@ function registerIpcHandlers() {
     return { mic, accessibility };
   });
 
+  ipcMain.handle('get_app_version', () => app.getVersion());
+
   // Microphone permission
   ipcMain.handle('request_microphone_access', async () => {
     if (process.platform !== 'darwin') return { granted: true };
@@ -642,12 +644,21 @@ app.whenReady().then(() => {
     }
   }
 
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[Verba updater] Checking for update... (current version:', app.getVersion() + ')');
+  });
+
   autoUpdater.on('update-available', (info) => {
-    console.log('[Verba] Update available:', info.version);
+    console.log('[Verba updater] Update available:', info.version);
     sendUpdateStatus('update-available', { version: info.version });
   });
 
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[Verba updater] Already up to date. Latest:', info.version);
+  });
+
   autoUpdater.on('download-progress', (progress) => {
+    console.log(`[Verba updater] Downloading... ${Math.round(progress.percent)}% (${progress.transferred}/${progress.total} bytes)`);
     sendUpdateStatus('update-download-progress', {
       percent: progress.percent,
       transferred: progress.transferred,
@@ -656,22 +667,26 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[Verba] Update downloaded:', info.version);
+    console.log('[Verba updater] Update downloaded:', info.version, '— will install on next quit');
     sendUpdateStatus('update-downloaded', { version: info.version });
   });
 
   autoUpdater.on('error', (err) => {
-    console.error('[Verba] Auto-update error:', err.message);
+    console.error('[Verba updater] Error:', err.message);
   });
 
   setTimeout(() => {
+    console.log('[Verba updater] Running initial update check...');
     autoUpdater.checkForUpdates().catch((err) => {
-      console.log('[Verba] Update check failed:', err.message);
+      console.error('[Verba updater] Initial check failed:', err.message);
     });
   }, 10000);
 
   setInterval(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
+    console.log('[Verba updater] Running periodic update check...');
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[Verba updater] Periodic check failed:', err.message);
+    });
   }, 30 * 60 * 1000);
 });
 

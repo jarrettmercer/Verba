@@ -811,6 +811,14 @@ if (btnDeactivateLicense) {
     });
 }
 
+// ===== APP VERSION =====
+invoke('get_app_version').then(version => {
+    const sidebarVersion = document.getElementById('sidebar-version');
+    const aboutVersion = document.getElementById('about-version');
+    if (sidebarVersion) sidebarVersion.textContent = `v${version}`;
+    if (aboutVersion) aboutVersion.textContent = `Version ${version} — Voice dictation for your desktop`;
+}).catch(() => {});
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkLicenseAndInit);
 } else {
