@@ -278,10 +278,14 @@ window.copyHistoryText = async function(index) {
 };
 
 // ===== SETTINGS =====
-// Settings are local for now — could be persisted in the store later
 const settingSounds = document.getElementById('setting-sounds');
 const settingAutoPaste = document.getElementById('setting-auto-paste');
 const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
+const settingHidePill = document.getElementById('setting-hide-pill');
+const rowHidePill = document.getElementById('row-hide-pill');
+
+// Show the hide-pill option on Windows only
+if (isWindows && rowHidePill) rowHidePill.style.display = '';
 
 async function loadSettings() {
     try {
@@ -289,6 +293,7 @@ async function loadSettings() {
         settingSounds.checked = settings.sounds_enabled !== false;
         settingAutoPaste.checked = settings.auto_paste !== false;
         settingLaunchAtLogin.checked = settings.launch_at_login === true;
+        if (settingHidePill) settingHidePill.checked = settings.hide_pill === true;
     } catch (_) {
         // Defaults
     }
@@ -325,6 +330,12 @@ settingAutoPaste.addEventListener('change', () => {
 settingLaunchAtLogin.addEventListener('change', () => {
     invoke('update_setting', { key: 'launch_at_login', value: settingLaunchAtLogin.checked }).catch(console.error);
 });
+
+if (settingHidePill) {
+    settingHidePill.addEventListener('change', () => {
+        invoke('update_setting', { key: 'hide_pill', value: settingHidePill.checked }).catch(console.error);
+    });
+}
 
 // ===== HOTKEY: DROPDOWN CHANGE =====
 const hotkeySelect = document.getElementById('hotkey-select');

@@ -151,6 +151,50 @@ let hotkeyRegistered = false;
 let fnTapProcess = null;
 let rctrlHookProcess = null;
 
+// ---- Pill visibility (Windows hide-when-idle) ----
+
+function isPillHidden() {
+  return process.platform === 'win32' && store && store.getSettings().hide_pill === true;
+}
+
+function positionPillForRecording() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const area = getPillArea();
+  const w = 145, h = 36, margin = 12;
+  mainWindow.setBounds({
+    x: Math.floor(area.x + area.width - w - margin),
+    y: Math.floor(area.y + margin),
+    width: w,
+    height: h,
+  });
+}
+
+function positionPillDefault() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const area = getPillArea();
+  const w = 145, h = 36;
+  mainWindow.setBounds({
+    x: Math.floor(area.x + (area.width - w) / 2),
+    y: Math.floor(area.y + area.height - h - area.margin),
+    width: w,
+    height: h,
+  });
+}
+
+function hidePillIfNeeded() {
+  if (isPillHidden() && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+  }
+}
+
+function showPillForRecording() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (isPillHidden()) {
+    positionPillForRecording();
+  }
+  mainWindow.showInactive();
+}
+
 function getFrontmostAppBundleIdAsync(callback) {
   if (process.platform !== 'darwin') { callback(null); return; }
   exec(
@@ -169,7 +213,11 @@ function runHotkeyAction(press, payload) {
   try {
     const wc = mainWindow.webContents;
     if (!wc || wc.isDestroyed() || wc.isCrashed()) return;
-    mainWindow.showInactive();
+    if (press) {
+      showPillForRecording();
+    } else {
+      mainWindow.showInactive();
+    }
     wc.send(press ? 'hotkey-pressed' : 'hotkey-released', payload !== undefined ? payload : undefined);
   } catch (e) {
     if (e.message && e.message.includes('disposed')) return;
@@ -545,7 +593,26 @@ function registerIpcHandlers() {
 
   // Settings
   ipcMain.handle('get_settings', () => store.getSettings());
-  ipcMain.handle('update_setting', (_, { key, value }) => store.updateSetting(key, value));
+  ipcMain.handle('update_setting', (_, { key, value }) => {
+    store.updateSetting(key, value);
+    // React to hide_pill toggle immediately
+    if (key === 'hide_pill') {
+      if (value && process.platform === 'win32') {
+        hidePillIfNeeded();
+      } else if (!value && mainWindow && !mainWindow.isDestroyed()) {
+        positionPillDefault();
+        mainWindow.showInactive();
+      }
+    }
+  });
+
+  // Pill returned to idle — hide if setting is on (Windows)
+  ipcMain.on('pill-idle', () => {
+    if (isPillHidden()) {
+      positionPillDefault();
+      hidePillIfNeeded();
+    }
+  });
 
   // Hotkey
   ipcMain.handle('get_hotkey_accelerator', () =>
@@ -596,16 +663,31 @@ function registerIpcHandlers() {
   ipcMain.on('toast-show', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     const area = getPillArea();
-    mainWindow.setBounds({
-      x: Math.floor(area.x + (area.width - TOAST_STACK_W) / 2),
-      y: Math.floor(area.y + area.height - TOAST_STACK_H - area.margin),
-      width: TOAST_STACK_W,
-      height: TOAST_STACK_H,
-    });
+    if (isPillHidden()) {
+      const margin = 12;
+      mainWindow.setBounds({
+        x: Math.floor(area.x + area.width - TOAST_STACK_W - margin),
+        y: Math.floor(area.y + margin),
+        width: TOAST_STACK_W,
+        height: TOAST_STACK_H,
+      });
+    } else {
+      mainWindow.setBounds({
+        x: Math.floor(area.x + (area.width - TOAST_STACK_W) / 2),
+        y: Math.floor(area.y + area.height - TOAST_STACK_H - area.margin),
+        width: TOAST_STACK_W,
+        height: TOAST_STACK_H,
+      });
+    }
   });
 
   ipcMain.on('toast-hide', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (isPillHidden()) {
+      // Will be fully hidden by pill-idle, just restore pill size at corner
+      positionPillForRecording();
+      return;
+    }
     const area = getPillArea();
     mainWindow.setBounds({
       x: Math.floor(area.x + (area.width - PILL_W) / 2),
@@ -675,6 +757,8 @@ app.whenReady().then(() => {
         createSetupWindow();
       }
     }
+    // Hide pill on startup if setting is enabled (Windows)
+    hidePillIfNeeded();
   });
 
   // Auto-update: check after a short delay, then periodically

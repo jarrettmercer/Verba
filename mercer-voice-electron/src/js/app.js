@@ -366,6 +366,8 @@ function setState(newState) {
         if (stateElements[s]) stateElements[s].style.display = s === newState ? 'flex' : 'none';
     });
     if (newState === 'error' && !document.getElementById('state-error-message')?.textContent) setErrorMessage('Error');
+    // Notify main process when pill returns to idle so it can hide the window if needed
+    if (newState === 'idle' && typeof send === 'function') send('pill-idle');
 }
 
 async function onHotkeyPressed() {
