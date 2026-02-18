@@ -641,6 +641,9 @@ const updateProgress = document.getElementById('update-progress');
 const updateProgressText = document.getElementById('update-progress-text');
 const updateProgressPct = document.getElementById('update-progress-pct');
 const updateProgressFill = document.getElementById('update-progress-fill');
+let checkUpdateTimer = null;
+
+function clearCheckTimer() { clearTimeout(checkUpdateTimer); checkUpdateTimer = null; }
 
 function setCheckUpdatesState(state, label) {
     if (!btnCheckUpdates) return;
@@ -648,7 +651,20 @@ function setCheckUpdatesState(state, label) {
     btnCheckUpdates.disabled = state === 'busy';
 }
 
+listen('update-error', (event) => {
+    clearCheckTimer();
+    const msg = event.payload && event.payload.message;
+    console.error('[Verba updater] Error received in UI:', msg);
+    if (updateProgress) updateProgress.style.display = 'none';
+    if (btnCheckUpdates) {
+        btnCheckUpdates.textContent = 'Update check failed';
+        btnCheckUpdates.disabled = false;
+        setTimeout(() => setCheckUpdatesState('idle', 'Check for updates'), 4000);
+    }
+});
+
 listen('update-available', (event) => {
+    clearCheckTimer();
     const version = event.payload && event.payload.version;
     setCheckUpdatesState('busy', version ? `Downloading v${version}…` : 'Downloading…');
     if (updateProgress) updateProgress.style.display = 'block';
@@ -656,6 +672,7 @@ listen('update-available', (event) => {
 });
 
 listen('update-not-available', () => {
+    clearCheckTimer();
     setCheckUpdatesState('idle', 'Up to date ✓');
     setTimeout(() => setCheckUpdatesState('idle', 'Check for updates'), 3000);
 });
@@ -686,7 +703,15 @@ listen('update-downloaded', (event) => {
 if (btnCheckUpdates) {
     btnCheckUpdates.addEventListener('click', () => {
         setCheckUpdatesState('busy', 'Checking…');
+        // Safety timeout — reset if no event fires within 15 seconds
+        clearCheckTimer();
+        checkUpdateTimer = setTimeout(() => {
+            if (btnCheckUpdates.disabled) {
+                setCheckUpdatesState('idle', 'Check for updates');
+            }
+        }, 15000);
         invoke('check_for_updates').catch(() => {
+            clearCheckTimer();
             setCheckUpdatesState('idle', 'Check for updates');
         });
     });

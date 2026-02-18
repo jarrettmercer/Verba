@@ -680,6 +680,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on('error', (err) => {
     console.error('[Verba updater] Error:', err.message);
+    sendUpdateStatus('update-error', { message: err.message });
   });
 
   setTimeout(() => {
