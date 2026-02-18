@@ -16,7 +16,7 @@ If you run from the parent folder or elsewhere, the app may not find its files.
 
 ## First run
 
-1. **Activate** — The dashboard opens; enter product key (e.g. `VERBA-DEV-KEY-0000-0000`).
+1. **Activate** — The dashboard opens; enter your product key.
 2. **Microphone** — On first launch the app requests mic access; macOS should show a prompt and add the app to System Settings → Privacy & Security → Microphone (listed as **Electron** when run via `npm start`). If you don’t see a prompt or “Electron” isn’t in the list, quit Verba completely, open **System Settings → Privacy & Security → Microphone**, then start Verba again — the prompt may appear on the second launch.
 3. **Hotkey** — If Cmd+Shift+Space doesn’t work, it may be taken. Free it in System Settings → Keyboard → Shortcuts, or the app will try Control+Option+Space. Restart after changing. If the shortcut still doesn’t work when another app is focused, add Verba/Electron in **Accessibility** (same Privacy & Security page).
 

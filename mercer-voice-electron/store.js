@@ -4,7 +4,6 @@ const path = require('path');
 function validateLicenseKey(key) {
   const k = String(key).trim().toUpperCase();
   if (!k) throw new Error('Please enter a product key');
-  if (k === 'VERBA-DEV-KEY-0000-0000') return;
   const parts = k.split('-');
   if (parts.length !== 5 || parts[0] !== 'VERBA') throw new Error('Invalid format. Use VERBA-XXXX-XXXX-XXXX-XXXX');
   for (let i = 1; i < parts.length; i++) {

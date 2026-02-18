@@ -14,8 +14,7 @@ dist/
 .idea/
 
 ## Secrets
-appsettings.*.json
-!appsettings.json
+appsettings*.json
 .env
 
 ## Node.js
