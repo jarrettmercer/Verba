@@ -112,7 +112,7 @@ let setupWindow = null;
 function createSetupWindow() {
   if (setupWindow && !setupWindow.isDestroyed()) { setupWindow.focus(); return; }
   setupWindow = new BrowserWindow({
-    width: 500, height: 480, resizable: false, center: true,
+    width: 520, height: 620, resizable: false, center: true,
     alwaysOnTop: false,
     webPreferences: {
       preload: path.resolve(__dirname, 'preload.js'),
