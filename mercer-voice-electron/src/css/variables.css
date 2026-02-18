@@ -29,6 +29,10 @@
     --font-weight--semibold: 600;
     --line-height--text-default: 1.4;
 
+    --pill-idle-opacity: 1;
+    --pill-idle-w: 76px;
+    --pill-idle-h: 12px;
+
     --pill-width: 76px;
     --pill-height: 12px;
     --pill-radius: 6px;

@@ -84,6 +84,28 @@ function playSound(samples) {
 function playBeep() { playSound(beepSamples); }
 function playBoop() { playSound(boopSamples); }
 
+const PILL_SIZE_MAP = { small: [76, 12], medium: [100, 18], large: [124, 24] };
+
+function applyAppearanceVars({ opacity, size }) {
+    console.log('[Verba] applyAppearanceVars opacity:', opacity, 'size:', size);
+    const root = document.documentElement;
+    root.style.setProperty('--pill-idle-opacity', opacity ?? 1);
+    const [w, h] = PILL_SIZE_MAP[size] ?? PILL_SIZE_MAP.small;
+    root.style.setProperty('--pill-idle-w', w + 'px');
+    root.style.setProperty('--pill-idle-h', h + 'px');
+    console.log('[Verba] CSS vars set — opacity:', opacity ?? 1, 'w:', w + 'px', 'h:', h + 'px');
+}
+
+async function applyPillAppearance() {
+    try {
+        const s = await invoke('get_pill_appearance');
+        console.log('[Verba] applyPillAppearance got:', s);
+        applyAppearanceVars(s);
+    } catch (err) {
+        console.error('[Verba] applyPillAppearance failed:', err);
+    }
+}
+
 function startAudioCapture() {
     return new Promise((resolve, reject) => {
         navigator.mediaDevices.getUserMedia({ audio: {
@@ -190,6 +212,9 @@ function init() {
     invoke('get_settings').then((s) => {
         if (s && typeof s.sounds_enabled === 'boolean') soundsEnabled = s.sounds_enabled;
     }).catch(() => {});
+
+    applyPillAppearance();
+    listen('pill-appearance-changed', (e) => applyAppearanceVars(e.payload));
 
     const peelBtn = document.getElementById('peel-btn');
     if (peelBtn) {

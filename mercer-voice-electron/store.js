@@ -41,6 +41,9 @@ class Store {
         hotkey_accelerator: process.platform === 'darwin' ? 'Command+Shift+Space' : 'Control+Shift+Space',
         api_config: { endpoint: '', api_key: '' },
         transcription: { source: 'local', local_model_path: '', local_model_size: 'small' },
+        pill_position: 'bottom-center',
+        pill_opacity: 1.0,
+        pill_size: 'small',
       },
     };
     try {
@@ -144,7 +147,7 @@ class Store {
   }
 
   updateSetting(key, value) {
-    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill'];
+    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill', 'pill_position', 'pill_opacity', 'pill_size'];
     if (this.data.settings[key] !== undefined || allowed.includes(key)) this.data.settings[key] = value;
     this.save();
   }

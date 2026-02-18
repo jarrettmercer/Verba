@@ -151,34 +151,81 @@ let hotkeyRegistered = false;
 let fnTapProcess = null;
 let rctrlHookProcess = null;
 
-// ---- Pill visibility (Windows hide-when-idle) ----
+// ---- Pill visibility ----
 
 function isPillHidden() {
-  return process.platform === 'win32' && store && store.getSettings().hide_pill === true;
+  return store && store.getSettings().hide_pill === true;
 }
 
 function positionPillForRecording() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const area = getPillArea();
   const w = 145, h = 36, margin = 12;
-  mainWindow.setBounds({
-    x: Math.floor(area.x + area.width - w - margin),
-    y: Math.floor(area.y + margin),
-    width: w,
-    height: h,
-  });
+  const bounds = { x: Math.floor(area.x + area.width - w - margin), y: Math.floor(area.y + margin), width: w, height: h };
+  console.log('[Verba] positionPillForRecording ->', bounds);
+  mainWindow.setBounds(bounds);
 }
 
 function positionPillDefault() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const area = getPillArea();
   const w = 145, h = 36;
-  mainWindow.setBounds({
-    x: Math.floor(area.x + (area.width - w) / 2),
-    y: Math.floor(area.y + area.height - h - area.margin),
-    width: w,
-    height: h,
-  });
+  const position = store ? (store.getSettings().pill_position || 'bottom-center') : 'bottom-center';
+  const margin = area.margin;
+  let x, y;
+  switch (position) {
+    case 'bottom-left':
+      x = Math.floor(area.x + margin);
+      y = Math.floor(area.y + area.height - h - margin);
+      break;
+    case 'bottom-right':
+      x = Math.floor(area.x + area.width - w - margin);
+      y = Math.floor(area.y + area.height - h - margin);
+      break;
+    case 'top-center':
+      x = Math.floor(area.x + (area.width - w) / 2);
+      y = Math.floor(area.y + margin);
+      break;
+    case 'top-left':
+      x = Math.floor(area.x + margin);
+      y = Math.floor(area.y + margin);
+      break;
+    case 'top-right':
+      x = Math.floor(area.x + area.width - w - margin);
+      y = Math.floor(area.y + margin);
+      break;
+    case 'bottom-center':
+    default:
+      x = Math.floor(area.x + (area.width - w) / 2);
+      y = Math.floor(area.y + area.height - h - margin);
+      break;
+  }
+  console.log('[Verba] positionPillDefault position=%s bounds={x:%d,y:%d}', position, x, y);
+  mainWindow.setBounds({ x, y, width: w, height: h });
+}
+
+/**
+ * Calculate bounds for the expanded toast+pill window, respecting pill_position.
+ * For bottom positions the window grows upward; for top positions it grows downward.
+ */
+function getToastBounds(TOAST_W, TOAST_H) {
+  const area = getPillArea();
+  const position = store ? (store.getSettings().pill_position || 'bottom-center') : 'bottom-center';
+  const margin = area.margin;
+  const isTop = position.startsWith('top');
+  let x, y;
+  if (position.endsWith('left')) {
+    x = Math.floor(area.x + margin);
+  } else if (position.endsWith('right')) {
+    x = Math.floor(area.x + area.width - TOAST_W - margin);
+  } else {
+    x = Math.floor(area.x + (area.width - TOAST_W) / 2);
+  }
+  y = isTop
+    ? Math.floor(area.y + margin)
+    : Math.floor(area.y + area.height - TOAST_H - margin);
+  console.log('[Verba] getToastBounds position=%s isTop=%s bounds={x:%d,y:%d,w:%d,h:%d}', position, isTop, x, y, TOAST_W, TOAST_H);
+  return { x, y, width: TOAST_W, height: TOAST_H };
 }
 
 function hidePillIfNeeded() {
@@ -189,6 +236,7 @@ function hidePillIfNeeded() {
 
 function showPillForRecording() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  console.log('[Verba] showPillForRecording isPillHidden=%s', isPillHidden());
   if (isPillHidden()) {
     positionPillForRecording();
   }
@@ -448,15 +496,8 @@ function registerIpcHandlers() {
   ipcMain.handle('deactivate_license', () => store.deactivateLicense());
   ipcMain.handle('finish_activation', () => {
     if (mainWindow) {
-      mainWindow.setSize(145, 36);
-      const area = getPillArea();
-      const w = 145, h = 36;
-      mainWindow.setBounds({
-        x: Math.floor(area.x + (area.width - w) / 2),
-        y: Math.floor(area.y + area.height - h - area.margin),
-        width: w,
-        height: h,
-      });
+      console.log('[Verba] finish_activation — repositioning pill');
+      positionPillDefault();
     }
     return Promise.resolve();
   });
@@ -595,18 +636,31 @@ function registerIpcHandlers() {
   ipcMain.handle('get_settings', () => store.getSettings());
   ipcMain.handle('update_setting', (_, { key, value }) => {
     store.updateSetting(key, value);
-    // React to hide_pill toggle immediately
     if (key === 'hide_pill') {
-      if (value && process.platform === 'win32') {
+      if (value) {
         hidePillIfNeeded();
       } else if (!value && mainWindow && !mainWindow.isDestroyed()) {
         positionPillDefault();
         mainWindow.showInactive();
       }
+    } else if (key === 'pill_position') {
+      positionPillDefault();
+    } else if (key === 'pill_opacity' || key === 'pill_size') {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const s = store.getSettings();
+        const payload = { opacity: s.pill_opacity, size: s.pill_size };
+        console.log('[Verba] pill-appearance-changed ->', payload);
+        mainWindow.webContents.send('pill-appearance-changed', payload);
+      }
     }
   });
 
-  // Pill returned to idle — hide if setting is on (Windows)
+  ipcMain.handle('get_pill_appearance', () => {
+    const s = store.getSettings();
+    return { position: s.pill_position, opacity: s.pill_opacity, size: s.pill_size, hide_pill: s.hide_pill };
+  });
+
+  // Pill returned to idle — hide if setting is on
   ipcMain.on('pill-idle', () => {
     if (isPillHidden()) {
       positionPillDefault();
@@ -669,39 +723,18 @@ function registerIpcHandlers() {
 
   ipcMain.on('toast-show', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const area = getPillArea();
-    if (isPillHidden()) {
-      const margin = 12;
-      mainWindow.setBounds({
-        x: Math.floor(area.x + area.width - TOAST_STACK_W - margin),
-        y: Math.floor(area.y + margin),
-        width: TOAST_STACK_W,
-        height: TOAST_STACK_H,
-      });
-    } else {
-      mainWindow.setBounds({
-        x: Math.floor(area.x + (area.width - TOAST_STACK_W) / 2),
-        y: Math.floor(area.y + area.height - TOAST_STACK_H - area.margin),
-        width: TOAST_STACK_W,
-        height: TOAST_STACK_H,
-      });
-    }
+    console.log('[Verba] toast-show — expanding window');
+    mainWindow.setBounds(getToastBounds(TOAST_STACK_W, TOAST_STACK_H));
   });
 
   ipcMain.on('toast-hide', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    console.log('[Verba] toast-hide — restoring pill position');
     if (isPillHidden()) {
-      // Will be fully hidden by pill-idle, just restore pill size at corner
       positionPillForRecording();
       return;
     }
-    const area = getPillArea();
-    mainWindow.setBounds({
-      x: Math.floor(area.x + (area.width - PILL_W) / 2),
-      y: Math.floor(area.y + area.height - PILL_H - area.margin),
-      width: PILL_W,
-      height: PILL_H,
-    });
+    positionPillDefault();
   });
 }
 
@@ -751,6 +784,8 @@ app.whenReady().then(() => {
   });
 
   mainWindow = createMainWindow();
+  console.log('[Verba] Applying startup pill position from store:', store.getSettings().pill_position || 'bottom-center (default)');
+  positionPillDefault();
   buildTray();
 
   hotkeyRegistered = registerHotkey();
@@ -764,7 +799,7 @@ app.whenReady().then(() => {
         createSetupWindow();
       }
     }
-    // Hide pill on startup if setting is enabled (Windows)
+    // Hide pill on startup if setting is enabled
     hidePillIfNeeded();
   });
 

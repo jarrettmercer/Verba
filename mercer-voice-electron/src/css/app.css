@@ -48,22 +48,22 @@
 
 /* Idle: subtle but visible so users can find the pill */
 .pill-overlay.state-idle {
-    opacity: 1;
+    opacity: var(--pill-idle-opacity);
     background: rgba(18, 18, 20, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.45);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transform: scale(
-        calc(var(--pill-width) / var(--pill-width-recording)),
-        calc(var(--pill-height) / var(--pill-height-recording))
+        calc(var(--pill-idle-w) / var(--pill-width-recording)),
+        calc(var(--pill-idle-h) / var(--pill-height-recording))
     );
-    transition: background 0.2s ease, transform 0.25s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: background 0.2s ease, transform 0.25s ease, box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
 }
 
 .pill-overlay.state-idle:hover,
 .pill-overlay.state-idle.cursor-over {
     transform: scale(
-        calc(1.2 * var(--pill-width) / var(--pill-width-recording)),
-        calc(1.2 * var(--pill-height) / var(--pill-height-recording))
+        calc(1.2 * var(--pill-idle-w) / var(--pill-width-recording)),
+        calc(1.2 * var(--pill-idle-h) / var(--pill-height-recording))
     );
     border-color: rgba(167, 139, 250, 0.5);
     box-shadow:

@@ -285,10 +285,50 @@
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="setting-row" id="row-hide-pill" style="display:none;">
+                </div>
+
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+
+                    <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-name">Hide Pill When Idle</div>
-                            <div class="setting-description">Hide the pill when not recording. It will appear in the top-right corner when you press the hotkey.</div>
+                            <div class="setting-name">Pill Position</div>
+                            <div class="setting-description">Where the pill sits on your screen</div>
+                        </div>
+                        <select class="setting-input setting-select" id="setting-pill-position">
+                            <option value="bottom-center">Bottom Center</option>
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="top-center">Top Center</option>
+                            <option value="top-left">Top Left</option>
+                            <option value="top-right">Top Right</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-name">Idle Size</div>
+                            <div class="setting-description">How large the pill appears when not recording</div>
+                        </div>
+                        <select class="setting-input setting-select" id="setting-pill-size">
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row setting-row-stacked">
+                        <div class="setting-info">
+                            <div class="setting-name">Idle Opacity <span id="pill-opacity-value">100%</span></div>
+                            <div class="setting-description">How visible the pill is when idle</div>
+                        </div>
+                        <input type="range" id="setting-pill-opacity" min="10" max="100" step="5" value="100" />
+                    </div>
+
+                    <div class="setting-row" id="row-hide-pill">
+                        <div class="setting-info">
+                            <div class="setting-name">Hide When Idle</div>
+                            <div class="setting-description">Pill only appears when the hotkey is pressed</div>
                         </div>
                         <label class="toggle">
                             <input type="checkbox" id="setting-hide-pill" />

@@ -282,10 +282,10 @@ const settingSounds = document.getElementById('setting-sounds');
 const settingAutoPaste = document.getElementById('setting-auto-paste');
 const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
 const settingHidePill = document.getElementById('setting-hide-pill');
-const rowHidePill = document.getElementById('row-hide-pill');
-
-// Show the hide-pill option on Windows only
-if (isWindows && rowHidePill) rowHidePill.style.display = '';
+const settingPillPosition = document.getElementById('setting-pill-position');
+const settingPillSize = document.getElementById('setting-pill-size');
+const settingPillOpacity = document.getElementById('setting-pill-opacity');
+const pillOpacityValue = document.getElementById('pill-opacity-value');
 
 async function loadSettings() {
     try {
@@ -294,6 +294,13 @@ async function loadSettings() {
         settingAutoPaste.checked = settings.auto_paste !== false;
         settingLaunchAtLogin.checked = settings.launch_at_login === true;
         if (settingHidePill) settingHidePill.checked = settings.hide_pill === true;
+        if (settingPillPosition) settingPillPosition.value = settings.pill_position ?? 'bottom-center';
+        if (settingPillSize) settingPillSize.value = settings.pill_size ?? 'small';
+        if (settingPillOpacity && pillOpacityValue) {
+            const opacityPct = Math.round((settings.pill_opacity ?? 1) * 100);
+            settingPillOpacity.value = opacityPct;
+            pillOpacityValue.textContent = opacityPct + '%';
+        }
     } catch (_) {
         // Defaults
     }
@@ -334,6 +341,26 @@ settingLaunchAtLogin.addEventListener('change', () => {
 if (settingHidePill) {
     settingHidePill.addEventListener('change', () => {
         invoke('update_setting', { key: 'hide_pill', value: settingHidePill.checked }).catch(console.error);
+    });
+}
+
+if (settingPillPosition) {
+    settingPillPosition.addEventListener('change', () => {
+        invoke('update_setting', { key: 'pill_position', value: settingPillPosition.value }).catch(console.error);
+    });
+}
+
+if (settingPillSize) {
+    settingPillSize.addEventListener('change', () => {
+        invoke('update_setting', { key: 'pill_size', value: settingPillSize.value }).catch(console.error);
+    });
+}
+
+if (settingPillOpacity) {
+    settingPillOpacity.addEventListener('input', () => {
+        const pct = Number(settingPillOpacity.value);
+        if (pillOpacityValue) pillOpacityValue.textContent = pct + '%';
+        invoke('update_setting', { key: 'pill_opacity', value: pct / 100 }).catch(console.error);
     });
 }
 
