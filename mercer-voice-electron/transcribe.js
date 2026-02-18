@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
+const os = require('os');
 
 function applySelfCorrections(text) {
   const t = text.trim();
@@ -117,7 +118,26 @@ async function transcribeAzure(wavPath, endpoint, apiKey) {
   throw new Error('Max retries exceeded');
 }
 
-async function transcribeLocal(wavPath, modelPath) {
+/**
+ * Build an initial_prompt string from the user's dictionary entries.
+ * This biases Whisper toward recognizing custom words, names, and jargon.
+ */
+function buildInitialPrompt(dictionary) {
+  if (!Array.isArray(dictionary) || dictionary.length === 0) return '';
+  const words = dictionary
+    .map((e) => {
+      // Use the replacement if it's a replacement type, otherwise the phrase
+      if (e.entry_type === 'replacement' && e.replacement) return e.replacement;
+      if (e.entry_type === 'blocked') return null; // skip blocked words
+      return e.phrase;
+    })
+    .filter(Boolean);
+  if (words.length === 0) return '';
+  // Whisper initial_prompt works best as a comma-separated list or short sentence
+  return words.join(', ');
+}
+
+async function transcribeLocal(wavPath, modelPath, dictionary) {
   if (!modelPath || !fs.existsSync(modelPath)) {
     throw new Error(
       'Local Whisper model not found. Go to Settings → Transcription and download a model first.'
@@ -130,13 +150,33 @@ async function transcribeLocal(wavPath, modelPath) {
   let whisper = require('@kutalia/whisper-node-addon');
   if (whisper.default) whisper = whisper.default;
 
-  const result = await whisper.transcribe({
+  // Use most CPU cores but leave 2 free for the OS/Electron
+  const cpuCount = os.cpus().length;
+  const nThreads = Math.max(1, Math.min(cpuCount - 2, 8));
+
+  // Build initial prompt from dictionary for better accuracy on custom words
+  const initialPrompt = buildInitialPrompt(dictionary);
+  if (initialPrompt) console.log('[Verba] Using initial_prompt from dictionary:', initialPrompt.slice(0, 100) + (initialPrompt.length > 100 ? '...' : ''));
+
+  const whisperParams = {
     fname_inp: wavPath,
     model: modelPath,
     language: 'en',
     use_gpu: true,
     no_prints: true,
-  });
+    n_threads: nThreads,
+  };
+  if (initialPrompt) whisperParams.initial_prompt = initialPrompt;
+
+  let result;
+  try {
+    result = await whisper.transcribe(whisperParams);
+  } catch (gpuErr) {
+    // GPU transcription failed — fall back to CPU
+    console.warn('[Verba] GPU transcription failed, retrying on CPU:', gpuErr.message);
+    whisperParams.use_gpu = false;
+    result = await whisper.transcribe(whisperParams);
+  }
 
   let segments = result;
   if (result && typeof result === 'object' && !Array.isArray(result)) {
@@ -175,7 +215,8 @@ async function transcribe(store, wavPath) {
     const modelPath = store.resolveLocalModelPath
       ? store.resolveLocalModelPath()
       : store.getDefaultLocalModelPath();
-    return transcribeLocal(wavPath, modelPath);
+    const dictionary = store.getDictionary ? store.getDictionary() : [];
+    return transcribeLocal(wavPath, modelPath, dictionary);
   }
   const cfg = store.getApiConfig();
   return transcribeAzure(wavPath, cfg.endpoint || null, cfg.api_key || null);

@@ -62,6 +62,74 @@ function computeRms(pcmBuffer) {
 // and would cause Whisper to hallucinate.
 const MIN_SPEECH_RMS = 0.005;
 
+// Silence threshold for trimming (samples below this are considered silence)
+const SILENCE_THRESHOLD = 0.02; // ~-34 dB
+// Minimum samples to keep as padding around speech (prevents clipping words)
+const SILENCE_PAD_SAMPLES = 1600; // 100ms at 16kHz
+
+/**
+ * Trim leading and trailing silence from PCM Int16 buffer.
+ * Keeps a small pad so words aren't clipped.
+ */
+function trimSilence(pcmBuffer, sampleRate) {
+  const numSamples = Math.floor(pcmBuffer.length / 2);
+  if (numSamples === 0) return pcmBuffer;
+
+  // Find first sample above threshold
+  let start = 0;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.abs(pcmBuffer.readInt16LE(i * 2) / 32768);
+    if (s > SILENCE_THRESHOLD) { start = i; break; }
+  }
+
+  // Find last sample above threshold
+  let end = numSamples - 1;
+  for (let i = numSamples - 1; i >= start; i--) {
+    const s = Math.abs(pcmBuffer.readInt16LE(i * 2) / 32768);
+    if (s > SILENCE_THRESHOLD) { end = i; break; }
+  }
+
+  // Add padding but clamp to buffer bounds
+  const padSamples = Math.floor(sampleRate * 0.1); // 100ms pad
+  start = Math.max(0, start - padSamples);
+  end = Math.min(numSamples - 1, end + padSamples);
+
+  const trimmedLength = (end - start + 1) * 2;
+  if (trimmedLength >= pcmBuffer.length * 0.9) return pcmBuffer; // barely any silence, skip copy
+  console.log('[Verba] Trimmed silence: kept', (end - start + 1), 'of', numSamples, 'samples');
+  return pcmBuffer.subarray(start * 2, (end + 1) * 2);
+}
+
+/**
+ * Normalize PCM Int16 audio to use the full dynamic range.
+ * This helps Whisper accuracy, especially on Windows where mic levels tend to be lower.
+ */
+function normalizeAudio(pcmBuffer) {
+  const numSamples = Math.floor(pcmBuffer.length / 2);
+  if (numSamples === 0) return pcmBuffer;
+
+  // Find peak amplitude
+  let peak = 0;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.abs(pcmBuffer.readInt16LE(i * 2));
+    if (s > peak) peak = s;
+  }
+
+  // If already loud enough (>50% of max) or silent, skip
+  if (peak < 1 || peak > 16384) return pcmBuffer;
+
+  // Scale to ~90% of max to leave headroom
+  const gain = Math.min(29491 / peak, 8.0); // cap at 8x to avoid amplifying noise too much
+  console.log('[Verba] Normalizing audio: peak =', peak, ', gain =', gain.toFixed(2) + 'x');
+  const out = Buffer.alloc(pcmBuffer.length);
+  for (let i = 0; i < numSamples; i++) {
+    const s = pcmBuffer.readInt16LE(i * 2);
+    const normalized = Math.round(s * gain);
+    out.writeInt16LE(Math.max(-32768, Math.min(32767, normalized)), i * 2);
+  }
+  return out;
+}
+
 /**
  * Write WAV from renderer-provided PCM (Int16, any sample rate).
  * Resamples to 16kHz for Whisper if needed.
@@ -80,9 +148,16 @@ function writeWavFromRendererBuffer(pcmBuffer, sampleRate, tempDir) {
   }
 
   const resampled = resampleTo16kHz(pcm, sampleRate || 44100);
-  const numOutSamples = resampled.length / 2;
+
+  // Trim silence from start/end to speed up transcription
+  const trimmed = trimSilence(resampled, TARGET_SAMPLE_RATE);
+
+  // Normalize volume for better accuracy
+  const normalized = normalizeAudio(trimmed);
+
+  const numOutSamples = normalized.length / 2;
   const wavPath = path.join(tempDir, `verba-${Date.now()}.wav`);
-  const wavBuffer = writeWavHeader(resampled, numOutSamples, TARGET_SAMPLE_RATE);
+  const wavBuffer = writeWavHeader(normalized, numOutSamples, TARGET_SAMPLE_RATE);
   fs.writeFileSync(wavPath, wavBuffer);
   return wavPath;
 }
