@@ -641,7 +641,14 @@ function registerIpcHandlers() {
 
   // Auto-update
   ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
+    console.log('[Verba updater] install-update IPC received — calling quitAndInstall()');
+    try {
+      autoUpdater.quitAndInstall(false, true);
+      console.log('[Verba updater] quitAndInstall() called successfully');
+    } catch (err) {
+      console.error('[Verba updater] quitAndInstall() threw an error:', err.message, err.stack);
+      throw err;
+    }
   });
 
   // Window drag

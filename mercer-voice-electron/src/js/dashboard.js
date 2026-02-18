@@ -718,8 +718,12 @@ listen('update-download-progress', (event) => {
     if (updateProgressFill) updateProgressFill.style.width = `${pct}%`;
 });
 
+let updateReady = false;
+
 listen('update-downloaded', (event) => {
     const version = event.payload && event.payload.version;
+    console.log('[Verba updater] update-downloaded event received, version:', version);
+    updateReady = true;
     // Hide progress bar, show banner
     if (updateProgress) updateProgress.style.display = 'none';
     setCheckUpdatesState('idle', 'Restart to update');
@@ -729,14 +733,22 @@ listen('update-downloaded', (event) => {
             : 'A new version of Verba is ready to install.';
     }
     if (updateBanner) updateBanner.style.display = 'flex';
-    // Repurpose the check-updates button to trigger install
-    if (btnCheckUpdates) {
-        btnCheckUpdates.onclick = () => invoke('install-update').catch(console.error);
-    }
 });
+
+function triggerInstallUpdate() {
+    console.log('[Verba updater] Restart to update clicked — invoking install-update');
+    invoke('install-update')
+        .then(() => console.log('[Verba updater] install-update IPC resolved'))
+        .catch((err) => console.error('[Verba updater] install-update IPC rejected:', err));
+}
 
 if (btnCheckUpdates) {
     btnCheckUpdates.addEventListener('click', () => {
+        // If update is downloaded, install instead of checking
+        if (updateReady) {
+            triggerInstallUpdate();
+            return;
+        }
         setCheckUpdatesState('busy', 'Checking…');
         // Safety timeout — reset if no event fires within 15 seconds
         clearCheckTimer();
@@ -753,11 +765,7 @@ if (btnCheckUpdates) {
 }
 
 if (btnRestartUpdate) {
-    btnRestartUpdate.addEventListener('click', () => {
-        invoke('install-update').catch((err) => {
-            console.error('Failed to install update:', err);
-        });
-    });
+    btnRestartUpdate.addEventListener('click', triggerInstallUpdate);
 }
 
 // ===== PLATFORM-SPECIFIC UI =====
