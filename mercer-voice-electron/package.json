@@ -23,11 +23,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -66,6 +70,7 @@
   },
   "dependencies": {
     "@kutalia/whisper-node-addon": "^1.1.0",
+    "electron-log": "^5.4.3",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.7.3",
     "form-data": "^4.0.0",

@@ -658,8 +658,12 @@ listen('update-error', (event) => {
     if (updateProgress) updateProgress.style.display = 'none';
     if (btnCheckUpdates) {
         btnCheckUpdates.textContent = 'Update check failed';
+        btnCheckUpdates.title = msg || 'Unknown error';
         btnCheckUpdates.disabled = false;
-        setTimeout(() => setCheckUpdatesState('idle', 'Check for updates'), 4000);
+        setTimeout(() => {
+            setCheckUpdatesState('idle', 'Check for updates');
+            btnCheckUpdates.title = '';
+        }, 4000);
     }
 });
 

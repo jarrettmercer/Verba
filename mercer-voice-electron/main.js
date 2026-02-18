@@ -3,10 +3,16 @@ const path = require('path');
 const fs = require('fs');
 const { exec, execSync, spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 const Store = require('./store.js');
 const { transcribe } = require('./transcribe.js');
 const { pasteText } = require('./paste.js');
 const { writeWavFromRendererBuffer } = require('./record.js');
+
+// Route all logs to ~/Library/Logs/Verba/main.log (macOS) or %APPDATA%\Verba\logs\main.log (Windows)
+log.transports.file.level = 'debug';
+log.transports.console.level = 'debug';
+Object.assign(console, log.functions);
 
 // Resolve the actual Electron binary path (for Accessibility prompting)
 const ELECTRON_BINARY = process.execPath;
@@ -637,7 +643,7 @@ app.whenReady().then(() => {
   });
 
   // Auto-update: check after a short delay, then periodically
-  autoUpdater.logger = console;
+  autoUpdater.logger = log;
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
