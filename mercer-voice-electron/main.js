@@ -88,6 +88,23 @@ function createDashboardWindow() {
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
 }
 
+let setupWindow = null;
+function createSetupWindow() {
+  if (setupWindow && !setupWindow.isDestroyed()) { setupWindow.focus(); return; }
+  setupWindow = new BrowserWindow({
+    width: 500, height: 480, resizable: false, center: true,
+    alwaysOnTop: false,
+    webPreferences: {
+      preload: path.resolve(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  setupWindow.setMenuBarVisibility(false);
+  setupWindow.loadFile(path.resolve(__dirname, 'src', 'permissions.html'));
+  setupWindow.on('closed', () => { setupWindow = null; });
+}
+
 function buildTray() {
   const iconPath = path.join(__dirname, 'src', 'icons', 'tray-icon.png');
   let icon = nativeImage.createEmpty();
@@ -435,6 +452,20 @@ function registerIpcHandlers() {
     return Promise.resolve();
   });
 
+  ipcMain.handle('open_input_monitoring_settings', () => {
+    if (process.platform === 'darwin') {
+      require('child_process').spawn('open', ['x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent'], { detached: true, stdio: 'ignore' });
+    }
+    return Promise.resolve();
+  });
+
+  ipcMain.handle('check_permissions', () => {
+    if (process.platform !== 'darwin') return { mic: 'granted', accessibility: true };
+    const mic = systemPreferences.getMediaAccessStatus('microphone');
+    const accessibility = systemPreferences.isTrustedAccessibilityClient(false);
+    return { mic, accessibility };
+  });
+
   // Microphone permission
   ipcMain.handle('request_microphone_access', async () => {
     if (process.platform !== 'darwin') return { granted: true };
@@ -584,15 +615,17 @@ app.whenReady().then(() => {
   mainWindow = createMainWindow();
   buildTray();
 
-  // Request Accessibility permission (needed for global shortcuts on newer macOS)
-  if (process.platform === 'darwin') {
-    requestAccessibilityIfNeeded();
-  }
-
   hotkeyRegistered = registerHotkey();
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (!store.getLicenseStatus()) createDashboardWindow();
+    if (process.platform === 'darwin') {
+      const mic = systemPreferences.getMediaAccessStatus('microphone');
+      const accessibility = systemPreferences.isTrustedAccessibilityClient(false);
+      if (mic !== 'granted' || !accessibility) {
+        createSetupWindow();
+      }
+    }
   });
 
   // Auto-update: check after a short delay, then periodically

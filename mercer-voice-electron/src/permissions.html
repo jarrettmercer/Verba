@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verba — Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #0a0a0a;
+      color: #fafafa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .header img {
+      width: 48px;
+      height: 48px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: #71717a;
+      max-width: 340px;
+      line-height: 1.5;
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .card {
+      background: #141414;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #1c1c1e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #a78bfa;
+    }
+
+    .card-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fafafa;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-required {
+      font-size: 10px;
+      font-weight: 500;
+      background: #3f3f46;
+      color: #a1a1aa;
+      border-radius: 4px;
+      padding: 1px 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: #71717a;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    .card-status {
+      font-size: 12px;
+      font-weight: 500;
+      color: #71717a;
+      margin-top: 4px;
+    }
+
+    .card-status.checking { color: #71717a; }
+    .card-status.granted  { color: #22c55e; }
+    .card-status.denied   { color: #f87171; }
+    .card-status.pending  { color: #fbbf24; }
+
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-settings {
+      font-size: 12px;
+      font-weight: 500;
+      color: #a78bfa;
+      background: rgba(167, 139, 250, 0.12);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-settings:hover { background: rgba(167, 139, 250, 0.2); }
+
+    .btn-skip {
+      font-size: 11px;
+      color: #52525b;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .btn-skip:hover { color: #71717a; }
+
+    .footer {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .btn-continue {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #a78bfa;
+      color: #0a0a0a;
+      transition: opacity 0.15s;
+    }
+
+    .btn-continue:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-continue:not(:disabled):hover { opacity: 0.85; }
+
+    .success-msg {
+      text-align: center;
+      color: #22c55e;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="icon.png" alt="Verba" />
+    <h1>Almost ready</h1>
+    <p>Verba needs a few permissions to work. Grant them below and this window will close automatically.</p>
+  </div>
+
+  <div class="cards">
+
+    <!-- Microphone -->
+    <div class="card" id="card-mic">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="11" rx="3"/>
+          <path d="M19 10a7 7 0 0 1-14 0"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="9" y1="22" x2="15" y2="22"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">
+          Microphone
+          <span class="badge-required">Required</span>
+        </div>
+        <div class="card-desc">Needed to record your voice for dictation.</div>
+        <div class="card-status checking" id="status-mic">Checking…</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-settings" id="btn-mic" onclick="openSettings('microphone')">Open Settings</button>
+      </div>
+    </div>
+
+    <!-- Accessibility -->
+    <div class="card" id="card-accessibility">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4l3 3"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">
+          Accessibility
+          <span class="badge-required">Required</span>
+        </div>
+        <div class="card-desc">Needed to paste transcribed text into other apps.</div>
+        <div class="card-status checking" id="status-accessibility">Checking…</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-settings" id="btn-accessibility" onclick="openSettings('accessibility')">Open Settings</button>
+      </div>
+    </div>
+
+    <!-- Input Monitoring -->
+    <div class="card" id="card-input-monitoring">
+      <div class="card-icon" style="color: #71717a;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 3l-4 4-4-4"/>
+          <line x1="8" y1="12" x2="8" y2="12"/>
+          <line x1="12" y1="12" x2="12" y2="12"/>
+          <line x1="16" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-name">Input Monitoring</div>
+        <div class="card-desc">Optional. Required for Fn/Globe key push-to-talk.</div>
+        <div class="card-status checking" id="status-input-monitoring">Checking…</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-settings" onclick="openSettings('input-monitoring')">Open Settings</button>
+        <button class="btn-skip" onclick="skipInputMonitoring()">Skip</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <button class="btn-continue" id="btn-continue" disabled onclick="finish()">Continue</button>
+    <div class="success-msg" id="success-msg">You're all set! Closing…</div>
+  </div>
+
+  <script>
+    let allGranted = false;
+    let inputMonitoringSkipped = false;
+
+    function updateCard(id, granted, isChecking) {
+      const statusEl = document.getElementById('status-' + id);
+      if (!statusEl) return;
+      statusEl.className = 'card-status';
+      if (isChecking) {
+        statusEl.textContent = 'Checking…';
+        statusEl.classList.add('checking');
+      } else if (granted) {
+        statusEl.textContent = 'Granted ✓';
+        statusEl.classList.add('granted');
+      } else {
+        statusEl.textContent = 'Not granted';
+        statusEl.classList.add('pending');
+      }
+    }
+
+    function openSettings(type) {
+      if (type === 'microphone') window.api.invoke('open_microphone_settings');
+      else if (type === 'accessibility') window.api.invoke('open_accessibility_settings');
+      else if (type === 'input-monitoring') window.api.invoke('open_input_monitoring_settings');
+    }
+
+    function skipInputMonitoring() {
+      inputMonitoringSkipped = true;
+      document.getElementById('card-input-monitoring').style.opacity = '0.45';
+      updateCard('input-monitoring', false, false);
+      document.getElementById('status-input-monitoring').textContent = 'Skipped';
+      document.getElementById('status-input-monitoring').className = 'card-status checking';
+      checkContinue();
+    }
+
+    function checkContinue() {
+      const micGranted = document.getElementById('status-mic').classList.contains('granted');
+      const accGranted = document.getElementById('status-accessibility').classList.contains('granted');
+      const continueBtn = document.getElementById('btn-continue');
+      if (micGranted && accGranted) {
+        continueBtn.disabled = false;
+        if (!allGranted) {
+          allGranted = true;
+          showSuccess();
+        }
+      }
+    }
+
+    function showSuccess() {
+      document.getElementById('btn-continue').style.display = 'none';
+      const msg = document.getElementById('success-msg');
+      msg.style.display = 'block';
+      setTimeout(() => window.close(), 1500);
+    }
+
+    function finish() {
+      window.close();
+    }
+
+    async function checkAll() {
+      try {
+        const { mic, accessibility } = await window.api.invoke('check_permissions');
+        updateCard('mic', mic === 'granted', false);
+        updateCard('accessibility', accessibility, false);
+        if (!inputMonitoringSkipped) {
+          // Input monitoring status isn't directly queryable; leave as checking unless skipped
+        }
+        checkContinue();
+      } catch (e) {
+        // ignore — keep showing "Checking…"
+      }
+    }
+
+    // Initial check + polling
+    checkAll();
+    setInterval(checkAll, 1500);
+  </script>
+</body>
+</html>
