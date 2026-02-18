@@ -468,6 +468,12 @@ function registerIpcHandlers() {
 
   ipcMain.handle('get_app_version', () => app.getVersion());
 
+  ipcMain.handle('check_for_updates', () => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[Verba updater] Manual check failed:', err.message);
+    });
+  });
+
   // Microphone permission
   ipcMain.handle('request_microphone_access', async () => {
     if (process.platform !== 'darwin') return { granted: true };
@@ -655,6 +661,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on('update-not-available', (info) => {
     console.log('[Verba updater] Already up to date. Latest:', info.version);
+    sendUpdateStatus('update-not-available', { version: info.version });
   });
 
   autoUpdater.on('download-progress', (progress) => {

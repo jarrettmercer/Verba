@@ -636,16 +636,61 @@ listen('stats-updated', () => {
 const updateBanner = document.getElementById('update-banner');
 const updateBannerText = document.getElementById('update-banner-text');
 const btnRestartUpdate = document.getElementById('btn-restart-update');
+const btnCheckUpdates = document.getElementById('btn-check-updates');
+const updateProgress = document.getElementById('update-progress');
+const updateProgressText = document.getElementById('update-progress-text');
+const updateProgressPct = document.getElementById('update-progress-pct');
+const updateProgressFill = document.getElementById('update-progress-fill');
+
+function setCheckUpdatesState(state, label) {
+    if (!btnCheckUpdates) return;
+    btnCheckUpdates.textContent = label;
+    btnCheckUpdates.disabled = state === 'busy';
+}
+
+listen('update-available', (event) => {
+    const version = event.payload && event.payload.version;
+    setCheckUpdatesState('busy', version ? `Downloading v${version}…` : 'Downloading…');
+    if (updateProgress) updateProgress.style.display = 'block';
+    if (updateProgressText) updateProgressText.textContent = version ? `Downloading v${version}` : 'Downloading update…';
+});
+
+listen('update-not-available', () => {
+    setCheckUpdatesState('idle', 'Up to date ✓');
+    setTimeout(() => setCheckUpdatesState('idle', 'Check for updates'), 3000);
+});
+
+listen('update-download-progress', (event) => {
+    const pct = event.payload && Math.round(event.payload.percent);
+    if (updateProgressPct) updateProgressPct.textContent = `${pct}%`;
+    if (updateProgressFill) updateProgressFill.style.width = `${pct}%`;
+});
 
 listen('update-downloaded', (event) => {
     const version = event.payload && event.payload.version;
+    // Hide progress bar, show banner
+    if (updateProgress) updateProgress.style.display = 'none';
+    setCheckUpdatesState('idle', 'Restart to update');
     if (updateBannerText) {
         updateBannerText.textContent = version
             ? `Verba v${version} is ready to install.`
             : 'A new version of Verba is ready to install.';
     }
     if (updateBanner) updateBanner.style.display = 'flex';
+    // Repurpose the check-updates button to trigger install
+    if (btnCheckUpdates) {
+        btnCheckUpdates.onclick = () => invoke('install-update').catch(console.error);
+    }
 });
+
+if (btnCheckUpdates) {
+    btnCheckUpdates.addEventListener('click', () => {
+        setCheckUpdatesState('busy', 'Checking…');
+        invoke('check_for_updates').catch(() => {
+            setCheckUpdatesState('idle', 'Check for updates');
+        });
+    });
+}
 
 if (btnRestartUpdate) {
     btnRestartUpdate.addEventListener('click', () => {

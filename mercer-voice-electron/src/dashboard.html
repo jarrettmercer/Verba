@@ -70,7 +70,20 @@
                 </li>
             </ul>
             <div class="sidebar-footer">
-                <span class="version-label" id="sidebar-version">v—</span>
+                <div class="sidebar-footer-top">
+                    <span class="version-label" id="sidebar-version">v—</span>
+                    <button type="button" class="btn-check-updates" id="btn-check-updates">Check for updates</button>
+                </div>
+                <!-- Download progress (hidden until an update is downloading) -->
+                <div class="update-progress" id="update-progress" style="display:none;">
+                    <div class="update-progress-label">
+                        <span id="update-progress-text">Downloading update…</span>
+                        <span id="update-progress-pct">0%</span>
+                    </div>
+                    <div class="update-progress-track">
+                        <div class="update-progress-fill" id="update-progress-fill"></div>
+                    </div>
+                </div>
             </div>
         </nav>
 
