@@ -346,14 +346,22 @@ const fnKeyNote = document.getElementById('fn-key-note');
         { value: 'F8', label: 'F8' },
     ] : [
         { value: 'RightControl', label: 'Right Ctrl (Push to Talk)' },
+        { value: 'RightShift', label: 'Right Shift (Push to Talk)' },
+        { value: 'RightAlt', label: 'Right Alt (Push to Talk)' },
         { value: 'Control+Shift+Space', label: 'Ctrl + Shift + Space' },
         { value: 'Alt+Shift+Space', label: 'Alt + Shift + Space' },
         { value: 'Control+Alt+Space', label: 'Ctrl + Alt + Space' },
         { value: 'Control+Shift+V', label: 'Ctrl + Shift + V' },
+        { value: 'Control+Shift+D', label: 'Ctrl + Shift + D' },
+        { value: 'Control+Space', label: 'Ctrl + Space' },
         { value: 'F5', label: 'F5' },
         { value: 'F6', label: 'F6' },
         { value: 'F7', label: 'F7' },
         { value: 'F8', label: 'F8' },
+        { value: 'F9', label: 'F9' },
+        { value: 'F10', label: 'F10' },
+        { value: 'F11', label: 'F11' },
+        { value: 'F12', label: 'F12' },
     ];
     hotkeySelect.innerHTML = '';
     options.forEach(({ value, label }) => {
@@ -372,19 +380,31 @@ const fnKeyNote = document.getElementById('fn-key-note');
     }
 })();
 
+const pushToTalkLabels = {
+    RightControl: 'Hold the Right Ctrl key to record, release to stop and transcribe. The left Ctrl key is unaffected.',
+    RightShift: 'Hold the Right Shift key to record, release to stop and transcribe. The left Shift key is unaffected.',
+    RightAlt: 'Hold the Right Alt key to record, release to stop and transcribe. The left Alt key is unaffected.',
+};
+
 function updateFnKeyNote() {
     if (fnKeyNote) {
         const val = hotkeySelect && hotkeySelect.value;
         if (val === 'Fn') {
             fnKeyNote.style.display = '';
-        } else if (val === 'RightControl') {
+            // Reset to macOS Fn key content
+            const nameEl = fnKeyNote.querySelector('.setting-name');
+            const descEl = fnKeyNote.querySelector('.setting-description');
+            const btnEl = fnKeyNote.querySelector('#btn-open-keyboard-settings');
+            if (nameEl) nameEl.textContent = 'Globe / Fn key tip';
+            if (descEl) descEl.innerHTML = 'Verba remaps the Globe key to F18 at the system level while running. To prevent the emoji picker from also opening, set <strong>"Press globe key to: Do Nothing"</strong> in System Settings &gt; Keyboard. The remap is automatically removed when Verba quits.';
+            if (btnEl) btnEl.style.display = '';
+        } else if (pushToTalkLabels[val]) {
             fnKeyNote.style.display = '';
-            // Re-use the note row but update its content for Windows push-to-talk
             const nameEl = fnKeyNote.querySelector('.setting-name');
             const descEl = fnKeyNote.querySelector('.setting-description');
             const btnEl = fnKeyNote.querySelector('#btn-open-keyboard-settings');
             if (nameEl) nameEl.textContent = 'Push to Talk';
-            if (descEl) descEl.textContent = 'Hold the Right Ctrl key to record, release to stop and transcribe. The left Ctrl key is unaffected.';
+            if (descEl) descEl.textContent = pushToTalkLabels[val];
             if (btnEl) btnEl.style.display = 'none';
         } else {
             fnKeyNote.style.display = 'none';
@@ -736,13 +756,13 @@ if (btnRestartUpdate) {
         const rowAccessibility = document.getElementById('row-accessibility');
         if (rowAccessibility) rowAccessibility.style.display = 'none';
 
-        // Simplify microphone description for Windows
+        // Update microphone description for Windows
         const micDesc = document.getElementById('microphone-description');
-        if (micDesc) micDesc.textContent = 'Verba needs microphone access. Windows should prompt you automatically when you first record.';
+        if (micDesc) micDesc.textContent = 'Verba needs microphone access. If recording doesn\'t work, open Microphone Settings and make sure apps can access your microphone.';
 
-        // Hide "Open Microphone Settings" button (Mac-only System Settings)
+        // Relabel the "Open Microphone Settings" button for Windows
         const btnOpenMic = document.getElementById('btn-open-microphone');
-        if (btnOpenMic) btnOpenMic.style.display = 'none';
+        if (btnOpenMic) btnOpenMic.textContent = 'Open Microphone Settings';
     }
 })();
 
@@ -856,6 +876,10 @@ if (btnRequestMicrophone) {
             if (result && result.granted) {
                 btnRequestMicrophone.textContent = 'Access granted';
                 setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 3000);
+            } else if (isWindows && result && result.error) {
+                // Windows: settings page was opened, show helpful message
+                btnRequestMicrophone.textContent = 'Settings opened — enable mic, then retry';
+                setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 8000);
             } else {
                 btnRequestMicrophone.textContent = 'Denied — open Microphone Settings to enable';
                 setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 5000);

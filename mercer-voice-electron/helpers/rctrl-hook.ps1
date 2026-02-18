@@ -1,18 +1,20 @@
-# rctrl-hook.ps1 — Low-level keyboard hook for Right Control push-to-talk
+# key-hook.ps1 — Low-level keyboard hook for push-to-talk
+# Accepts a virtual key code as the first argument (default: 0xA3 = Right Control)
 # Outputs PRESS / RELEASE on stdout (same protocol as macOS fn-key-tap helper)
+
+param([int]$VkCode = 0xA3)
 
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-public class RCtrlHook {
+public class KeyHook {
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN    = 0x0100;
     private const int WM_KEYUP      = 0x0101;
     private const int WM_SYSKEYDOWN = 0x0104;
     private const int WM_SYSKEYUP   = 0x0105;
-    private const int VK_RCONTROL   = 0xA3;
 
     private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -54,13 +56,14 @@ public class RCtrlHook {
 
     private static IntPtr hookId = IntPtr.Zero;
     private static bool pressed = false;
+    private static int targetVk;
     // prevent GC from collecting the delegate
     private static LowLevelKeyboardProc procDelegate;
 
     private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
         if (nCode >= 0) {
             var info = (KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT));
-            if (info.vkCode == VK_RCONTROL) {
+            if (info.vkCode == targetVk) {
                 int msg = wParam.ToInt32();
                 if ((msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) && !pressed) {
                     pressed = true;
@@ -76,7 +79,8 @@ public class RCtrlHook {
         return CallNextHookEx(hookId, nCode, wParam, lParam);
     }
 
-    public static void Run() {
+    public static void Run(int vkCode) {
+        targetVk = vkCode;
         procDelegate = HookCallback;
         using (var curProcess = Process.GetCurrentProcess())
         using (var curModule = curProcess.MainModule) {
@@ -86,7 +90,7 @@ public class RCtrlHook {
             Console.Error.WriteLine("Failed to install keyboard hook");
             return;
         }
-        Console.Error.WriteLine("RCtrl hook installed");
+        Console.Error.WriteLine("Key hook installed for VK 0x" + vkCode.ToString("X2"));
         Console.Error.Flush();
         // Message loop — required for low-level hooks to receive callbacks
         MSG msg;
@@ -96,4 +100,4 @@ public class RCtrlHook {
 }
 "@
 
-[RCtrlHook]::Run()
+[KeyHook]::Run($VkCode)

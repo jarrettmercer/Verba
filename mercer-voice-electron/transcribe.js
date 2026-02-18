@@ -45,6 +45,25 @@ function isLikelyHallucination(text) {
     const fillers = ['you', 'the', 'a', 'an', 'um', 'uh', 'so', 'and', 'thanks', 'thank', 'bye', 'i', 'it', 'is', 'oh'];
     if (words.every((w) => fillers.includes(w))) return true;
   }
+  // Catch common Whisper hallucination phrases from training data
+  const halluPhrases = [
+    'thank you for watching', 'thanks for watching', 'please subscribe',
+    'like and subscribe', 'see you next time', 'you follow us',
+    'all that is good', 'but that means', 'goodbye', 'good night',
+    'thank you very much', 'thanks for listening', 'see you later',
+    'please like and subscribe', 'don\'t forget to subscribe',
+    'if you enjoyed this', 'leave a comment', 'hit the bell',
+    'check out our', 'follow us on', 'visit our website',
+  ];
+  for (const phrase of halluPhrases) {
+    if (stripped.includes(phrase)) return true;
+  }
+  // Detect incoherent multi-sentence output (many short unrelated sentences)
+  const sentences = stripped.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  if (sentences.length >= 3) {
+    const avgWordsPerSentence = words.length / sentences.length;
+    if (avgWordsPerSentence <= 4) return true;
+  }
   return false;
 }
 

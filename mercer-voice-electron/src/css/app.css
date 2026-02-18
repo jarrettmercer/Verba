@@ -46,11 +46,12 @@
     width: 100%;
 }
 
-/* Idle: tiny alpha so macOS delivers mouse events (fully transparent = clicks pass through) */
+/* Idle: subtle but visible so users can find the pill */
 .pill-overlay.state-idle {
     opacity: 1;
-    background: rgba(18, 18, 20, 0.01);
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(18, 18, 20, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transform: scale(
         calc(var(--pill-width) / var(--pill-width-recording)),
         calc(var(--pill-height) / var(--pill-height-recording))

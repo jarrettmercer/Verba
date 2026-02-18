@@ -43,13 +43,42 @@ function resampleTo16kHz(pcm16Buffer, fromRate) {
 }
 
 /**
+ * Compute RMS energy of PCM Int16 buffer.
+ * Returns a value between 0 and 1.
+ */
+function computeRms(pcmBuffer) {
+  const numSamples = Math.floor(pcmBuffer.length / 2);
+  if (numSamples === 0) return 0;
+  let sumSq = 0;
+  for (let i = 0; i < numSamples; i++) {
+    const sample = pcmBuffer.readInt16LE(i * 2) / 32768;
+    sumSq += sample * sample;
+  }
+  return Math.sqrt(sumSq / numSamples);
+}
+
+// Minimum RMS energy to consider audio as containing speech.
+// Below this threshold the recording is effectively silence / background noise
+// and would cause Whisper to hallucinate.
+const MIN_SPEECH_RMS = 0.005;
+
+/**
  * Write WAV from renderer-provided PCM (Int16, any sample rate).
  * Resamples to 16kHz for Whisper if needed.
+ * Returns null if the audio is too short or too quiet (prevents hallucinations).
  */
 function writeWavFromRendererBuffer(pcmBuffer, sampleRate, tempDir) {
   if (!pcmBuffer || pcmBuffer.length < 3200) return null;
-  const numSamples = Math.floor(pcmBuffer.length / 2);
   const pcm = Buffer.isBuffer(pcmBuffer) ? pcmBuffer : Buffer.from(pcmBuffer);
+
+  // Check audio energy — reject near-silent recordings that cause hallucinations
+  const rms = computeRms(pcm);
+  console.log('[Verba] Audio RMS energy:', rms.toFixed(6));
+  if (rms < MIN_SPEECH_RMS) {
+    console.log('[Verba] Audio too quiet (RMS', rms.toFixed(6), '< threshold', MIN_SPEECH_RMS, '), skipping transcription');
+    return null;
+  }
+
   const resampled = resampleTo16kHz(pcm, sampleRate || 44100);
   const numOutSamples = resampled.length / 2;
   const wavPath = path.join(tempDir, `verba-${Date.now()}.wav`);

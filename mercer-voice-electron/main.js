@@ -26,6 +26,20 @@ function getAssetPath(...p) {
   return path.join(__dirname, 'src', ...p);
 }
 
+/**
+ * Return the display area and margin for pill positioning.
+ * On Windows, use workArea (excludes the taskbar) so the pill sits above it.
+ * On macOS, use full bounds (macOS dock behaviour is already handled).
+ */
+function getPillArea() {
+  const primary = screen.getPrimaryDisplay();
+  if (process.platform === 'win32') {
+    const wa = primary.workArea;
+    return { x: wa.x, y: wa.y, width: wa.width, height: wa.height, margin: 10 };
+  }
+  return { x: primary.bounds.x, y: primary.bounds.y, width: primary.size.width, height: primary.size.height, margin: 28 };
+}
+
 function createMainWindow() {
   const preloadPath = path.resolve(__dirname, 'preload.js');
   const indexPath = path.resolve(__dirname, 'src', 'index.html');
@@ -55,13 +69,12 @@ function createMainWindow() {
   win.setMenuBarVisibility(false);
   win.loadFile(indexPath);
 
-  const primary = screen.getPrimaryDisplay();
-  const marginBottom = 28;
+  const area = getPillArea();
   const w = 145;
   const h = 36;
   win.setBounds({
-    x: Math.floor(primary.bounds.x + (primary.size.width - w) / 2),
-    y: Math.floor(primary.bounds.y + primary.size.height - h - marginBottom),
+    x: Math.floor(area.x + (area.width - w) / 2),
+    y: Math.floor(area.y + area.height - h - area.margin),
     width: w,
     height: h,
   });
@@ -241,9 +254,16 @@ function stopFnKeyTap() {
   }
 }
 
-// ---- Right Ctrl key via low-level keyboard hook (Windows, hold-to-record) ----
+// ---- Push-to-talk via low-level keyboard hook (Windows, hold-to-record) ----
 
-function startRCtrlHook() {
+// Map push-to-talk key names to Windows virtual key codes
+const PUSH_TO_TALK_KEYS = {
+  RightControl: 0xA3,
+  RightShift:   0xA1,
+  RightAlt:     0xA5,
+};
+
+function startRCtrlHook(keyName) {
   if (process.platform !== 'win32') return false;
   const helperPath = path.join(__dirname, 'helpers', 'rctrl-hook.ps1').replace('app.asar', 'app.asar.unpacked');
   if (!fs.existsSync(helperPath)) {
@@ -253,8 +273,10 @@ function startRCtrlHook() {
 
   stopRCtrlHook();
 
+  const vkCode = PUSH_TO_TALK_KEYS[keyName] || 0xA3;
+
   rctrlHookProcess = spawn('powershell', [
-    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helperPath,
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helperPath, '-VkCode', String(vkCode),
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
   let lineBuffer = '';
@@ -271,15 +293,15 @@ function startRCtrlHook() {
 
   rctrlHookProcess.stderr.on('data', (data) => {
     const msg = data.toString().trim();
-    if (msg) console.log('[Verba][rctrl-hook]', msg);
+    if (msg) console.log('[Verba][key-hook]', msg);
   });
 
   rctrlHookProcess.on('exit', (code) => {
-    console.log('[Verba] rctrl-hook exited with code', code);
+    console.log('[Verba] key-hook exited with code', code);
     rctrlHookProcess = null;
   });
 
-  console.log('[Verba] Right Ctrl hook started (low-level keyboard hook, hold-to-record)');
+  console.log('[Verba] Push-to-talk hook started for', keyName, '(VK 0x' + vkCode.toString(16).toUpperCase() + ')');
   return true;
 }
 
@@ -337,13 +359,13 @@ function registerHotkey() {
     console.warn('[Verba] Fn key tap failed, falling back to keyboard shortcut');
   }
 
-  // Right Control: use low-level keyboard hook for hold-to-record (Windows)
-  if (preferred === 'RightControl' && process.platform === 'win32') {
-    if (startRCtrlHook()) {
-      lastRegisteredAccelerator = 'RightControl';
+  // Push-to-talk keys: use low-level keyboard hook for hold-to-record (Windows)
+  if (PUSH_TO_TALK_KEYS[preferred] && process.platform === 'win32') {
+    if (startRCtrlHook(preferred)) {
+      lastRegisteredAccelerator = preferred;
       return true;
     }
-    console.warn('[Verba] RCtrl hook failed, falling back to keyboard shortcut');
+    console.warn('[Verba] Push-to-talk hook failed for', preferred, ', falling back to keyboard shortcut');
   }
 
   const accelerators = getHotkeyAccelerators();
@@ -379,12 +401,11 @@ function registerIpcHandlers() {
   ipcMain.handle('finish_activation', () => {
     if (mainWindow) {
       mainWindow.setSize(145, 36);
-      const primary = screen.getPrimaryDisplay();
-      const marginBottom = 28;
+      const area = getPillArea();
       const w = 145, h = 36;
       mainWindow.setBounds({
-        x: Math.floor(primary.bounds.x + (primary.size.width - w) / 2),
-        y: Math.floor(primary.bounds.y + primary.size.height - h - marginBottom),
+        x: Math.floor(area.x + (area.width - w) / 2),
+        y: Math.floor(area.y + area.height - h - area.margin),
         width: w,
         height: h,
       });
@@ -447,6 +468,8 @@ function registerIpcHandlers() {
   ipcMain.handle('open_microphone_settings', () => {
     if (process.platform === 'darwin') {
       require('child_process').spawn('open', ['x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'], { detached: true, stdio: 'ignore' });
+    } else if (process.platform === 'win32') {
+      exec('start ms-settings:privacy-microphone', { shell: true });
     }
     return Promise.resolve();
   });
@@ -482,6 +505,19 @@ function registerIpcHandlers() {
 
   // Microphone permission
   ipcMain.handle('request_microphone_access', async () => {
+    if (process.platform === 'win32') {
+      // On Windows, trigger the mic permission prompt by requesting media access
+      // through the renderer's getUserMedia (Electron will show the OS prompt)
+      try {
+        const status = systemPreferences.getMediaAccessStatus('microphone');
+        if (status === 'granted') return { granted: true };
+        // Open Windows microphone privacy settings so user can enable it
+        exec('start ms-settings:privacy-microphone', { shell: true });
+        return { granted: false, error: 'Please enable microphone access for Verba in the Settings window that just opened, then try again.' };
+      } catch (err) {
+        return { granted: false, error: err.message };
+      }
+    }
     if (process.platform !== 'darwin') return { granted: true };
     try {
       const granted = await systemPreferences.askForMediaAccess('microphone');
@@ -556,14 +592,13 @@ function registerIpcHandlers() {
   // Toast resize — expand window to fit toast above pill, shrink back when dismissed
   const PILL_W = 145, PILL_H = 36;
   const TOAST_STACK_W = 380, TOAST_STACK_H = 106;
-  const MARGIN_BOTTOM = 28;
 
   ipcMain.on('toast-show', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const primary = screen.getPrimaryDisplay();
+    const area = getPillArea();
     mainWindow.setBounds({
-      x: Math.floor(primary.bounds.x + (primary.size.width - TOAST_STACK_W) / 2),
-      y: Math.floor(primary.bounds.y + primary.size.height - TOAST_STACK_H - MARGIN_BOTTOM),
+      x: Math.floor(area.x + (area.width - TOAST_STACK_W) / 2),
+      y: Math.floor(area.y + area.height - TOAST_STACK_H - area.margin),
       width: TOAST_STACK_W,
       height: TOAST_STACK_H,
     });
@@ -571,10 +606,10 @@ function registerIpcHandlers() {
 
   ipcMain.on('toast-hide', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const primary = screen.getPrimaryDisplay();
+    const area = getPillArea();
     mainWindow.setBounds({
-      x: Math.floor(primary.bounds.x + (primary.size.width - PILL_W) / 2),
-      y: Math.floor(primary.bounds.y + primary.size.height - PILL_H - MARGIN_BOTTOM),
+      x: Math.floor(area.x + (area.width - PILL_W) / 2),
+      y: Math.floor(area.y + area.height - PILL_H - area.margin),
       width: PILL_W,
       height: PILL_H,
     });
