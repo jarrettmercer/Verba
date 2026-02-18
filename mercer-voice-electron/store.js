@@ -41,7 +41,7 @@ class Store {
         launch_at_login: false,
         hotkey_accelerator: process.platform === 'darwin' ? 'Command+Shift+Space' : 'Control+Shift+Space',
         api_config: { endpoint: '', api_key: '' },
-        transcription: { source: 'local', local_model_path: '', local_model_size: 'tiny' },
+        transcription: { source: 'local', local_model_path: '', local_model_size: 'small' },
       },
     };
     try {

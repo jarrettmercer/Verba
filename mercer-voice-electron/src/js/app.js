@@ -86,7 +86,12 @@ function playBoop() { playSound(boopSamples); }
 
 function startAudioCapture() {
     return new Promise((resolve, reject) => {
-        navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } })
+        navigator.mediaDevices.getUserMedia({ audio: {
+            channelCount: 1,
+            autoGainControl: true,
+            noiseSuppression: true,
+            echoCancellation: false,
+        } })
             .then((stream) => {
                 const chunks = [];
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
