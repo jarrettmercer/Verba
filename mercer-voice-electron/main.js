@@ -21,6 +21,7 @@ let mainWindow = null;
 let dashboardWindow = null;
 let tray = null;
 let store = null;
+let updateDownloadedInfo = null;
 
 function getAssetPath(...p) {
   return path.join(__dirname, 'src', ...p);
@@ -695,15 +696,22 @@ function registerIpcHandlers() {
 
   // Auto-update
   ipcMain.handle('install-update', () => {
-    console.log('[Verba updater] install-update IPC received — calling quitAndInstall()');
-    try {
-      autoUpdater.quitAndInstall(false, true);
-      console.log('[Verba updater] quitAndInstall() called successfully');
-    } catch (err) {
-      console.error('[Verba updater] quitAndInstall() threw an error:', err.message, err.stack);
-      throw err;
-    }
+    console.log('[Verba updater] install-update IPC received — scheduling quitAndInstall() via setImmediate');
+    // Use setImmediate so the IPC response is sent back to the renderer before
+    // quitAndInstall() triggers app.quit(), which would otherwise close the
+    // IPC channel mid-response and abort the install on macOS.
+    setImmediate(() => {
+      try {
+        console.log('[Verba updater] calling quitAndInstall()');
+        autoUpdater.quitAndInstall(false, true);
+      } catch (err) {
+        console.error('[Verba updater] quitAndInstall() threw:', err.message, err.stack);
+      }
+    });
+    return Promise.resolve();
   });
+
+  ipcMain.handle('get_update_ready', () => updateDownloadedInfo);
 
   // Window drag
   ipcMain.on('window-drag-start', (_, { offsetX, offsetY }) => {
@@ -842,6 +850,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[Verba updater] Update downloaded:', info.version, '— will install on next quit');
+    updateDownloadedInfo = { version: info.version };
     sendUpdateStatus('update-downloaded', { version: info.version });
   });
 

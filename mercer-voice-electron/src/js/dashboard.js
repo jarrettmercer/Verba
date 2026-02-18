@@ -747,11 +747,8 @@ listen('update-download-progress', (event) => {
 
 let updateReady = false;
 
-listen('update-downloaded', (event) => {
-    const version = event.payload && event.payload.version;
-    console.log('[Verba updater] update-downloaded event received, version:', version);
+function showUpdateReadyUI(version) {
     updateReady = true;
-    // Hide progress bar, show banner
     if (updateProgress) updateProgress.style.display = 'none';
     setCheckUpdatesState('idle', 'Restart to update');
     if (updateBannerText) {
@@ -760,7 +757,21 @@ listen('update-downloaded', (event) => {
             : 'A new version of Verba is ready to install.';
     }
     if (updateBanner) updateBanner.style.display = 'flex';
+}
+
+listen('update-downloaded', (event) => {
+    const version = event.payload && event.payload.version;
+    console.log('[Verba updater] update-downloaded event received, version:', version);
+    showUpdateReadyUI(version);
 });
+
+// Catch updates that finished downloading before the dashboard opened
+invoke('get_update_ready').then((info) => {
+    if (info && info.version) {
+        console.log('[Verba updater] update already ready on dashboard open, version:', info.version);
+        showUpdateReadyUI(info.version);
+    }
+}).catch(() => {});
 
 function triggerInstallUpdate() {
     console.log('[Verba updater] Restart to update clicked — invoking install-update');
