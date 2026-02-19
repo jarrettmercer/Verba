@@ -63,9 +63,9 @@ function computeRms(pcmBuffer) {
 const MIN_SPEECH_RMS = 0.005;
 
 // Silence threshold for trimming (samples below this are considered silence)
-const SILENCE_THRESHOLD = 0.02; // ~-34 dB
+const SILENCE_THRESHOLD = 0.02; // ~-34 dB relative to normalized peak
 // Minimum samples to keep as padding around speech (prevents clipping words)
-const SILENCE_PAD_SAMPLES = 1600; // 100ms at 16kHz
+const SILENCE_PAD_SAMPLES = 4800; // 300ms at 16kHz
 
 /**
  * Trim leading and trailing silence from PCM Int16 buffer.
@@ -90,7 +90,7 @@ function trimSilence(pcmBuffer, sampleRate) {
   }
 
   // Add padding but clamp to buffer bounds
-  const padSamples = Math.floor(sampleRate * 0.1); // 100ms pad
+  const padSamples = SILENCE_PAD_SAMPLES;
   start = Math.max(0, start - padSamples);
   end = Math.min(numSamples - 1, end + padSamples);
 
@@ -149,15 +149,16 @@ function writeWavFromRendererBuffer(pcmBuffer, sampleRate, tempDir) {
 
   const resampled = resampleTo16kHz(pcm, sampleRate || 44100);
 
+  // Normalize volume first, so trimSilence operates on a standardized dynamic range.
+  // This prevents quiet Windows microphones from being aggressively chopped off.
+  const normalized = normalizeAudio(resampled);
+
   // Trim silence from start/end to speed up transcription
-  const trimmed = trimSilence(resampled, TARGET_SAMPLE_RATE);
+  const trimmed = trimSilence(normalized, TARGET_SAMPLE_RATE);
 
-  // Normalize volume for better accuracy
-  const normalized = normalizeAudio(trimmed);
-
-  const numOutSamples = normalized.length / 2;
+  const numOutSamples = trimmed.length / 2;
   const wavPath = path.join(tempDir, `verba-${Date.now()}.wav`);
-  const wavBuffer = writeWavHeader(normalized, numOutSamples, TARGET_SAMPLE_RATE);
+  const wavBuffer = writeWavHeader(trimmed, numOutSamples, TARGET_SAMPLE_RATE);
   fs.writeFileSync(wavPath, wavBuffer);
   return wavPath;
 }
