@@ -760,6 +760,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     padding: 12px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
@@ -776,6 +777,15 @@ html, body {
 
 .setting-info {
     flex: 1;
+    min-width: 0;
+}
+
+/* Selects inside a setting-row must not inherit width:100% from .setting-input —
+   that would push flex-basis to the full container width, leaving no room for
+   .setting-info.  Give them a compact fixed width instead. */
+.setting-row:not(.setting-row-stacked) .setting-select {
+    width: 160px;
+    flex-shrink: 0;
 }
 
 .setting-name {
