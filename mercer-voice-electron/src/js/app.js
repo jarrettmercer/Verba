@@ -86,10 +86,14 @@ function playBoop() { playSound(boopSamples); }
 
 function startAudioCapture() {
     return new Promise((resolve, reject) => {
+        const isWin = window.api?.platform === 'win32';
         navigator.mediaDevices.getUserMedia({ audio: {
             channelCount: 1,
-            autoGainControl: true,
-            noiseSuppression: true,
+            // Disable Chromium's aggressive audio DSP on Windows because it often
+            // heavily distorts voice audio when combined with Windows OS-level AGC,
+            // leading to "underwater" sound and severe Whisper hallucinations.
+            autoGainControl: isWin ? false : true,
+            noiseSuppression: isWin ? false : true,
             echoCancellation: false,
         } })
             .then((stream) => {
