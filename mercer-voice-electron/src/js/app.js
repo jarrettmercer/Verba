@@ -94,7 +94,10 @@ function startAudioCapture() {
         } })
             .then((stream) => {
                 const chunks = [];
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                // Initialize AudioContext at 16kHz so the browser does native resampling.
+                // This completely skips the slow JS-based resampling step in record.js,
+                // drastically speeding up transcription.
+                const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 const src = ctx.createMediaStreamSource(stream);
                 const bufferSize = 4096;
                 const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
