@@ -5,7 +5,7 @@ const { exec, execSync, spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const Store = require('./store.js');
-const { transcribe } = require('./transcribe.js');
+const { transcribe, testAzureEndpoint } = require('./transcribe.js');
 const { pasteText } = require('./paste.js');
 const { writeWavFromRendererBuffer } = require('./record.js');
 
@@ -628,6 +628,10 @@ function registerIpcHandlers() {
   // API / transcription config
   ipcMain.handle('get_api_config', () => store.getApiConfig());
   ipcMain.handle('set_api_config', (_, { endpoint, apiKey }) => store.setApiConfig(endpoint, apiKey));
+
+  ipcMain.handle('test_azure_endpoint', async (_, { endpoint, apiKey }) => {
+    return testAzureEndpoint(endpoint, apiKey);
+  });
 
   ipcMain.handle('get_transcription_config', () => store.getTranscriptionConfig());
   ipcMain.handle('set_transcription_config', (_, { source, localModelPath, localModelSize }) =>
