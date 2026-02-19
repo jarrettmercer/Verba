@@ -492,7 +492,17 @@ function registerIpcHandlers() {
   ipcMain.handle('transcribe', async (_, payload) => {
     const wavPath = payload && payload.wavPath;
     if (!wavPath) return Promise.reject(new Error('No audio path'));
-    return transcribe(store, wavPath);
+    try {
+      const result = await transcribe(store, wavPath);
+      return result;
+    } finally {
+      // Clean up temporary audio file to avoid cluttering the disk
+      fs.unlink(wavPath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.warn('[Verba] Failed to clean up temp wav file:', err.message);
+        }
+      });
+    }
   });
 
   ipcMain.handle('paste_text', async (_, { text, targetBundleId }) => {

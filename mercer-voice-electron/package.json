@@ -8,8 +8,8 @@
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
     "prestart": "node scripts/postinstall.js",
-    "start": "ELECTRON_RUN_AS_NODE= electron .",
-    "dev": "ELECTRON_RUN_AS_NODE= electron .",
+    "start": "electron .",
+    "dev": "electron .",
     "build": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "release": "electron-builder --mac --win --publish always",

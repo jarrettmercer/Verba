@@ -1,11 +1,11 @@
 const { clipboard } = require('electron');
-const { execSync } = require('child_process');
+const { execSync, exec } = require('child_process');
 
 const VERBA_BUNDLE_ID = 'com.mercer.verba';
 
 function pasteText(text, targetBundleId) {
   const t = typeof text === 'string' ? text.trim() : '';
-  if (!t) return;
+  if (!t) return Promise.resolve();
 
   console.log('[Verba] Paste: setting clipboard (' + t.length + ' chars)');
   clipboard.writeText(t);
@@ -16,7 +16,7 @@ function pasteText(text, targetBundleId) {
   // On Windows we always try to paste (no bundle ID needed, just Ctrl+V into the foreground app)
   if (!hasMacTarget && process.platform !== 'win32') {
     console.log('[Verba] Paste: no target app, clipboard set only');
-    return;
+    return Promise.resolve();
   }
 
   if (process.platform === 'darwin') {
@@ -32,14 +32,15 @@ function pasteText(text, targetBundleId) {
     // Brief delay for the app to become frontmost, then send Cmd+V
     return new Promise((resolve) => {
       setTimeout(() => {
-        try {
-          console.log('[Verba] Paste: sending Cmd+V');
-          execSync(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, { timeout: 3000 });
-          console.log('[Verba] Paste: Cmd+V sent');
-        } catch (e) {
-          console.warn('[Verba] Paste: keystroke failed (grant Accessibility?)', e.message);
-        }
-        resolve();
+        console.log('[Verba] Paste: sending Cmd+V');
+        exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, { timeout: 3000 }, (error) => {
+          if (error) {
+            console.warn('[Verba] Paste: keystroke failed (grant Accessibility?)', error.message);
+          } else {
+            console.log('[Verba] Paste: Cmd+V sent');
+          }
+          resolve();
+        });
       }, 200);
     });
   }
@@ -48,20 +49,24 @@ function pasteText(text, targetBundleId) {
     // On Windows, send Ctrl+V using PowerShell and .NET SendKeys
     return new Promise((resolve) => {
       setTimeout(() => {
-        try {
-          console.log('[Verba] Paste: sending Ctrl+V on Windows');
-          execSync(
-            'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\'^v\')"',
-            { timeout: 5000, windowsHide: true }
-          );
-          console.log('[Verba] Paste: Ctrl+V sent');
-        } catch (e) {
-          console.warn('[Verba] Paste: SendKeys failed', e.message);
-        }
-        resolve();
+        console.log('[Verba] Paste: sending Ctrl+V on Windows');
+        exec(
+          'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\'^v\')"',
+          { timeout: 5000, windowsHide: true },
+          (error) => {
+            if (error) {
+              console.warn('[Verba] Paste: SendKeys failed', error.message);
+            } else {
+              console.log('[Verba] Paste: Ctrl+V sent');
+            }
+            resolve();
+          }
+        );
       }, 200);
     });
   }
+
+  return Promise.resolve();
 }
 
 module.exports = { pasteText };
