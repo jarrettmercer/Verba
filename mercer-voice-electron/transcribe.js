@@ -150,9 +150,9 @@ async function transcribeLocal(wavPath, modelPath, dictionary) {
   let whisper = require('@kutalia/whisper-node-addon');
   if (whisper.default) whisper = whisper.default;
 
-  // Use most CPU cores but leave 2 free for the OS/Electron
+  // Use most CPU cores to maximize transcription speed, capped at 8 as whisper.cpp scaling drops off
   const cpuCount = os.cpus().length;
-  const nThreads = Math.max(1, Math.min(cpuCount - 2, 8));
+  const nThreads = Math.max(1, Math.min(cpuCount, 8));
 
   // Build initial prompt from dictionary for better accuracy on custom words
   const initialPrompt = buildInitialPrompt(dictionary);
