@@ -68,7 +68,7 @@ function isLikelyHallucination(text) {
   return false;
 }
 
-async function transcribeAzure(wavPath, endpoint, apiKey) {
+async function transcribeAzure(wavPath, endpoint, apiKey, dictionary) {
   if (!endpoint || !apiKey) {
     throw new Error('Azure credential not set — enter your endpoint and API key in Settings → Transcription (Azure section).');
   }
@@ -113,7 +113,7 @@ async function transcribeAzure(wavPath, endpoint, apiKey) {
     if (!trimmed) throw new Error('Whisper returned empty text');
     const out = applySelfCorrections(trimmed);
     if (isLikelyHallucination(out)) return '';
-    return out;
+    return applyDictionaryReplacements(out, dictionary);
   }
   throw new Error('Max retries exceeded');
 }
@@ -206,20 +206,47 @@ async function transcribeLocal(wavPath, modelPath, dictionary) {
   if (!cleaned) return '';
   const out = applySelfCorrections(cleaned);
   if (isLikelyHallucination(out)) return '';
+  return applyDictionaryReplacements(out, dictionary);
+}
+
+function applyDictionaryReplacements(text, dictionary) {
+  if (!text || !Array.isArray(dictionary) || dictionary.length === 0) return text;
+  let out = text;
+  
+  // Sort by length descending to match longest phrases first
+  const sorted = [...dictionary].sort((a, b) => b.phrase.length - a.phrase.length);
+  
+  for (const entry of sorted) {
+    if (!entry.phrase) continue;
+    // Only apply if it's a replacement or blocked
+    if (entry.entry_type === 'replacement' && entry.replacement) {
+      // Case-insensitive word boundary replacement
+      const regex = new RegExp(`\\b${escapeRegExp(entry.phrase)}\\b`, 'gi');
+      out = out.replace(regex, entry.replacement);
+    } else if (entry.entry_type === 'blocked') {
+      const regex = new RegExp(`\\b${escapeRegExp(entry.phrase)}\\b`, 'gi');
+      // Replace with empty string and clean up double spaces
+      out = out.replace(regex, '').replace(/\s{2,}/g, ' ').trim();
+    }
+  }
   return out;
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function transcribe(store, wavPath) {
   const source = store.data.settings.transcription?.source || 'local';
+  const dictionary = store.getDictionary ? store.getDictionary() : [];
   if (source === 'local') {
     const modelPath = store.resolveLocalModelPath
       ? store.resolveLocalModelPath()
       : store.getDefaultLocalModelPath();
-    const dictionary = store.getDictionary ? store.getDictionary() : [];
     return transcribeLocal(wavPath, modelPath, dictionary);
   }
   const cfg = store.getApiConfig();
-  return transcribeAzure(wavPath, cfg.endpoint || null, cfg.api_key || null);
+  return transcribeAzure(wavPath, cfg.endpoint || null, cfg.api_key || null, dictionary);
 }
 
 async function testAzureEndpoint(endpoint, apiKey) {
