@@ -18,64 +18,6 @@ html, body {
     user-select: none;
 }
 
-/* ===== LICENSE SCREEN (same size as dashboard) ===== */
-.license-screen {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--colors--black);
-    z-index: 1000;
-}
-.license-screen-box {
-    text-align: center;
-    max-width: 380px;
-    padding: 24px;
-}
-.license-screen-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--colors--white);
-    margin: 0 0 8px;
-}
-.license-screen-hint {
-    font-size: 14px;
-    color: var(--colors--gray-light);
-    margin: 0 0 20px;
-    line-height: 1.5;
-}
-.license-screen-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px 14px;
-    font-size: 14px;
-    letter-spacing: 0.06em;
-    font-family: inherit;
-    border: 1px solid var(--colors--border);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--colors--white);
-    margin-bottom: 8px;
-}
-.license-screen-input::placeholder {
-    color: var(--colors--gray);
-}
-.license-screen-input:focus {
-    outline: none;
-    border-color: var(--colors--primary);
-}
-.license-screen-error {
-    font-size: 13px;
-    color: var(--color-error);
-    min-height: 20px;
-    margin: 0 0 14px;
-}
-.license-screen-btn {
-    padding: 12px 28px;
-    font-size: 14px;
-}
-
 /* ===== LAYOUT ===== */
 .dashboard {
     display: flex;

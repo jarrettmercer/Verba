@@ -195,20 +195,6 @@ function init() {
         stateElements[s] = document.getElementById(`state-${s}`);
     });
 
-    const licenseOverlay = document.getElementById('license-overlay');
-    const openDashboardBtn = document.getElementById('license-open-dashboard-btn');
-    if (openDashboardBtn) openDashboardBtn.addEventListener('click', () => invoke('open_dashboard').catch(() => {}));
-
-    (async function checkLicense() {
-        try {
-            const licensed = await invoke('get_license_status');
-            if (licensed) licenseOverlay.style.display = 'none';
-            else licenseOverlay.style.display = 'flex';
-        } catch (_) {
-            licenseOverlay.style.display = 'flex';
-        }
-    })();
-
     invoke('get_settings').then((s) => {
         if (s && typeof s.sounds_enabled === 'boolean') soundsEnabled = s.sounds_enabled;
     }).catch(() => {});
@@ -280,8 +266,6 @@ function init() {
     listen('set-paste-target', (event) => {
         pasteTargetBundleId = event.payload ?? null;
     });
-    listen('license-activated', () => { if (licenseOverlay) licenseOverlay.style.display = 'none'; });
-    listen('license-deactivated', () => { if (licenseOverlay) licenseOverlay.style.display = 'flex'; });
     listen('pill-cursor-over', (event) => {
         const over = event.payload === true;
         if (pill) pill.classList.toggle('cursor-over', over && currentState === 'idle');

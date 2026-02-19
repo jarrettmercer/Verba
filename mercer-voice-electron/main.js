@@ -490,24 +490,8 @@ function registerHotkey() {
 let dragOffset = null;
 
 function registerIpcHandlers() {
-  // License
-  ipcMain.handle('get_license_status', () => store.getLicenseStatus());
-  ipcMain.handle('activate_license', (_, arg) => {
-    const key = arg && typeof arg === 'object' && 'key' in arg ? arg.key : arg;
-    return store.activateLicense(key);
-  });
-  ipcMain.handle('deactivate_license', () => store.deactivateLicense());
-  ipcMain.handle('finish_activation', () => {
-    if (mainWindow) {
-      console.log('[Verba] finish_activation — repositioning pill');
-      positionPillDefault();
-    }
-    return Promise.resolve();
-  });
-
   // Recording
   ipcMain.handle('start_recording', async () => {
-    if (!store.getLicenseStatus()) return Promise.reject(new Error('Please activate with a product key first'));
     if (mainWindow) mainWindow.webContents.send('recording-started');
     return Promise.resolve();
   });
@@ -823,7 +807,6 @@ app.whenReady().then(() => {
   hotkeyRegistered = registerHotkey();
 
   mainWindow.webContents.on('did-finish-load', () => {
-    if (!store.getLicenseStatus()) createDashboardWindow();
     if (process.platform === 'darwin') {
       const mic = systemPreferences.getMediaAccessStatus('microphone');
       const accessibility = systemPreferences.isTrustedAccessibilityClient(false);
