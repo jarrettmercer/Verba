@@ -222,4 +222,53 @@ async function transcribe(store, wavPath) {
   return transcribeAzure(wavPath, cfg.endpoint || null, cfg.api_key || null);
 }
 
-module.exports = { transcribe };
+async function testAzureEndpoint(endpoint, apiKey) {
+  if (!endpoint || !apiKey) {
+    return { ok: false, message: 'Endpoint and API key are required' };
+  }
+  try {
+    const FormData = require('form-data');
+    const form = new FormData();
+    // Send a tiny silent WAV (44-byte header + 0 data) to trigger a real API response
+    const wavHeader = Buffer.alloc(44);
+    wavHeader.write('RIFF', 0);
+    wavHeader.writeUInt32LE(36, 4);
+    wavHeader.write('WAVE', 8);
+    wavHeader.write('fmt ', 12);
+    wavHeader.writeUInt32LE(16, 16);
+    wavHeader.writeUInt16LE(1, 20);    // PCM
+    wavHeader.writeUInt16LE(1, 22);    // mono
+    wavHeader.writeUInt32LE(16000, 24); // sample rate
+    wavHeader.writeUInt32LE(32000, 28); // byte rate
+    wavHeader.writeUInt16LE(2, 32);    // block align
+    wavHeader.writeUInt16LE(16, 34);   // bits per sample
+    wavHeader.write('data', 36);
+    wavHeader.writeUInt32LE(0, 40);
+
+    form.append('file', wavHeader, { filename: 'test.wav', contentType: 'audio/wav' });
+
+    const res = await require('node-fetch')(endpoint, {
+      method: 'POST',
+      headers: { 'api-key': apiKey, ...form.getHeaders() },
+      body: form,
+      duplex: 'half',
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, message: `Authentication failed (${res.status}). Check your API key.` };
+    }
+    if (res.status === 404) {
+      return { ok: false, message: 'Endpoint not found (404). Check your deployment URL.' };
+    }
+    // Any 2xx or even a 400 "no audio" means the endpoint is reachable and credentials work
+    if (res.ok || res.status === 400) {
+      return { ok: true, message: 'Connection successful — endpoint and key are valid.' };
+    }
+    const body = await res.text().catch(() => '');
+    return { ok: false, message: `Unexpected response (${res.status}): ${body.slice(0, 200)}` };
+  } catch (err) {
+    return { ok: false, message: `Connection failed: ${err.message || err}` };
+  }
+}
+
+module.exports = { transcribe, testAzureEndpoint };

@@ -499,8 +499,28 @@ async function loadTranscriptionConfig() {
     } catch (_) {}
 }
 
-if (sourceAzure) sourceAzure.addEventListener('change', updateTranscriptionFieldsVisibility);
-if (sourceLocal) sourceLocal.addEventListener('change', updateTranscriptionFieldsVisibility);
+async function autoSaveTranscriptionSource() {
+    const source = sourceLocal && sourceLocal.checked ? 'local' : 'azure';
+    try {
+        const config = await invoke('get_transcription_config');
+        await invoke('set_transcription_config', {
+            source,
+            localModelPath: config.local_model_path || '',
+            localModelSize: config.local_model_size || 'tiny',
+        });
+    } catch (err) {
+        console.error('Failed to auto-save transcription source:', err);
+    }
+}
+
+if (sourceAzure) sourceAzure.addEventListener('change', () => {
+    updateTranscriptionFieldsVisibility();
+    autoSaveTranscriptionSource();
+});
+if (sourceLocal) sourceLocal.addEventListener('change', () => {
+    updateTranscriptionFieldsVisibility();
+    autoSaveTranscriptionSource();
+});
 
 if (localModelSizeSelect) {
     localModelSizeSelect.addEventListener('change', () => {
@@ -622,6 +642,13 @@ btnSaveApi.addEventListener('click', async () => {
 
     try {
         await invoke('set_api_config', { endpoint, apiKey: apiKey });
+        // Also persist the transcription source as azure when saving API config
+        const txConfig = await invoke('get_transcription_config');
+        await invoke('set_transcription_config', {
+            source: 'azure',
+            localModelPath: txConfig.local_model_path || '',
+            localModelSize: txConfig.local_model_size || 'tiny',
+        });
         apiStatus.textContent = 'Saved successfully';
         apiStatus.className = 'api-status success';
         setTimeout(() => { apiStatus.textContent = ''; }, 3000);
@@ -631,6 +658,33 @@ btnSaveApi.addEventListener('click', async () => {
         console.error('Failed to save API config:', err);
     }
 });
+
+// ===== TEST AZURE ENDPOINT =====
+const btnTestAzure = document.getElementById('btn-test-azure');
+if (btnTestAzure) {
+    btnTestAzure.addEventListener('click', async () => {
+        const endpoint = apiEndpointInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        if (!endpoint || !apiKey) {
+            apiStatus.textContent = 'Enter endpoint and API key first';
+            apiStatus.className = 'api-status error';
+            return;
+        }
+        apiStatus.textContent = 'Testing...';
+        apiStatus.className = 'api-status';
+        btnTestAzure.disabled = true;
+        try {
+            const result = await invoke('test_azure_endpoint', { endpoint, apiKey });
+            apiStatus.textContent = result.message || 'Connection successful';
+            apiStatus.className = result.ok ? 'api-status success' : 'api-status error';
+            setTimeout(() => { apiStatus.textContent = ''; }, 5000);
+        } catch (err) {
+            apiStatus.textContent = (err && (err.message || String(err))) || 'Test failed';
+            apiStatus.className = 'api-status error';
+        }
+        btnTestAzure.disabled = false;
+    });
+}
 
 // ===== UTILITY =====
 function escapeHtml(str) {
