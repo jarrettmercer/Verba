@@ -98,10 +98,7 @@ function startAudioCapture() {
         } })
             .then((stream) => {
                 const chunks = [];
-                // Initialize AudioContext at 16kHz so the browser does native resampling.
-                // This completely skips the slow JS-based resampling step in record.js,
-                // drastically speeding up transcription.
-                const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const src = ctx.createMediaStreamSource(stream);
                 const bufferSize = 4096;
                 const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
@@ -132,20 +129,25 @@ function startAudioCapture() {
 
                 stopAudioCapture = () => {
                     return new Promise((res) => {
-                        try {
-                            processor.disconnect();
-                            src.disconnect();
-                            stream.getTracks().forEach((t) => t.stop());
-                            ctx.close();
-                        } catch (_) {}
-                        const total = chunks.reduce((n, c) => n + c.length, 0);
-                        const merged = new Int16Array(total);
-                        let offset = 0;
-                        for (const c of chunks) {
-                            merged.set(c, offset);
-                            offset += c.length;
-                        }
-                        res({ buffer: merged.buffer, sampleRate: ctx.sampleRate });
+                        // Wait a short moment to capture the tail end of the audio before disconnecting.
+                        // OS audio buffers and ScriptProcessorNodes introduce a 100-300ms delay 
+                        // from when you speak to when it hits the onaudioprocess callback.
+                        setTimeout(() => {
+                            try {
+                                processor.disconnect();
+                                src.disconnect();
+                                stream.getTracks().forEach((t) => t.stop());
+                                ctx.close();
+                            } catch (_) {}
+                            const total = chunks.reduce((n, c) => n + c.length, 0);
+                            const merged = new Int16Array(total);
+                            let offset = 0;
+                            for (const c of chunks) {
+                                merged.set(c, offset);
+                                offset += c.length;
+                            }
+                            res({ buffer: merged.buffer, sampleRate: ctx.sampleRate });
+                        }, 400); // 400ms buffer flush delay
                     });
                 };
                 resolve();

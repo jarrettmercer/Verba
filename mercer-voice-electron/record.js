@@ -63,7 +63,7 @@ function computeRms(pcmBuffer) {
 const MIN_SPEECH_RMS = 0.005;
 
 // Silence threshold for trimming (samples below this are considered silence)
-const SILENCE_THRESHOLD = 0.02; // ~-34 dB relative to normalized peak
+const SILENCE_THRESHOLD = 0.01; // Lowered to ~-40 dB to prevent clipping quiet Windows mics
 // Minimum samples to keep as padding around speech (prevents clipping words)
 const SILENCE_PAD_SAMPLES = 4800; // 300ms at 16kHz
 
