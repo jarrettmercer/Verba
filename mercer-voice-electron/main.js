@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, systemPreferences, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { exec, execSync, spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
@@ -22,6 +23,7 @@ let dashboardWindow = null;
 let tray = null;
 let store = null;
 let updateDownloadedInfo = null;
+let updateDownloadedFilePath = null;
 
 function getAssetPath(...p) {
   return path.join(__dirname, 'src', ...p);
@@ -696,16 +698,38 @@ function registerIpcHandlers() {
 
   // Auto-update
   ipcMain.handle('install-update', () => {
-    console.log('[Verba updater] install-update IPC received — scheduling quitAndInstall() via setImmediate');
-    // Use setImmediate so the IPC response is sent back to the renderer before
-    // quitAndInstall() triggers app.quit(), which would otherwise close the
-    // IPC channel mid-response and abort the install on macOS.
+    console.log('[Verba updater] install-update IPC received');
     setImmediate(() => {
       try {
-        console.log('[Verba updater] calling quitAndInstall()');
-        autoUpdater.quitAndInstall(false, true);
+        if (process.platform === 'darwin' && app.isPackaged && updateDownloadedFilePath && fs.existsSync(updateDownloadedFilePath)) {
+          // On macOS, Squirrel.Mac's code-signature verification often silently
+          // prevents quitAndInstall() from doing anything.  Bypass it entirely:
+          // spawn a detached shell script that waits for this process to exit,
+          // then overwrites the app bundle with the downloaded ZIP, then relaunches.
+          const exePath = app.getPath('exe'); // …/Verba.app/Contents/MacOS/Verba
+          const appBundlePath = path.dirname(path.dirname(path.dirname(exePath))); // …/Verba.app
+          const installDir = path.dirname(appBundlePath); // e.g. /Applications
+          const zipPath = updateDownloadedFilePath;
+          const pid = process.pid;
+          console.log('[Verba updater] macOS manual update: zip=%s installDir=%s', zipPath, installDir);
+          const scriptContent = [
+            '#!/bin/bash',
+            `while kill -0 ${pid} 2>/dev/null; do sleep 0.1; done`,
+            `ditto -x -k -- '${zipPath.replace(/'/g, "'\\''")}' '${installDir.replace(/'/g, "'\\''")}'`,
+            `open -n '${appBundlePath.replace(/'/g, "'\\''")}'`,
+          ].join('\n');
+          const scriptPath = path.join(os.tmpdir(), 'verba-update.sh');
+          fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+          spawn('bash', [scriptPath], { detached: true, stdio: 'ignore' }).unref();
+          console.log('[Verba updater] update script spawned, calling app.exit(0)');
+          app.exit(0);
+        } else {
+          // Windows / Linux — or fallback if zip path is unavailable
+          console.log('[Verba updater] calling quitAndInstall()');
+          autoUpdater.quitAndInstall(false, true);
+        }
       } catch (err) {
-        console.error('[Verba updater] quitAndInstall() threw:', err.message, err.stack);
+        console.error('[Verba updater] install-update error:', err.message, err.stack);
       }
     });
     return Promise.resolve();
@@ -849,8 +873,9 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[Verba updater] Update downloaded:', info.version, '— will install on next quit');
+    console.log('[Verba updater] Update downloaded:', info.version, '— zip path:', info.downloadedFile);
     updateDownloadedInfo = { version: info.version };
+    updateDownloadedFilePath = info.downloadedFile || null;
     sendUpdateStatus('update-downloaded', { version: info.version });
   });
 
