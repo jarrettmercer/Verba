@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, systemPreferences, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { exec, execSync, spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
@@ -21,6 +22,8 @@ let mainWindow = null;
 let dashboardWindow = null;
 let tray = null;
 let store = null;
+let updateDownloadedInfo = null;
+let updateDownloadedFilePath = null;
 
 function getAssetPath(...p) {
   return path.join(__dirname, 'src', ...p);
@@ -439,31 +442,8 @@ function registerHotkey() {
 let dragOffset = null;
 
 function registerIpcHandlers() {
-  // License
-  ipcMain.handle('get_license_status', () => store.getLicenseStatus());
-  ipcMain.handle('activate_license', (_, arg) => {
-    const key = arg && typeof arg === 'object' && 'key' in arg ? arg.key : arg;
-    return store.activateLicense(key);
-  });
-  ipcMain.handle('deactivate_license', () => store.deactivateLicense());
-  ipcMain.handle('finish_activation', () => {
-    if (mainWindow) {
-      mainWindow.setSize(145, 36);
-      const area = getPillArea();
-      const w = 145, h = 36;
-      mainWindow.setBounds({
-        x: Math.floor(area.x + (area.width - w) / 2),
-        y: Math.floor(area.y + area.height - h - area.margin),
-        width: w,
-        height: h,
-      });
-    }
-    return Promise.resolve();
-  });
-
   // Recording
   ipcMain.handle('start_recording', async () => {
-    if (!store.getLicenseStatus()) return Promise.reject(new Error('Please activate with a product key first'));
     if (mainWindow) mainWindow.webContents.send('recording-started');
     return Promise.resolve();
   });
@@ -655,8 +635,43 @@ function registerIpcHandlers() {
 
   // Auto-update
   ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
+    console.log('[Verba updater] install-update IPC received');
+    setImmediate(() => {
+      try {
+        if (process.platform === 'darwin' && app.isPackaged && updateDownloadedFilePath && fs.existsSync(updateDownloadedFilePath)) {
+          // On macOS, Squirrel.Mac's code-signature verification silently
+          // prevents quitAndInstall() from doing anything on unsigned builds.
+          // Bypass it: spawn a detached shell script that waits for this process
+          // to exit, overwrites the app bundle with the downloaded ZIP, then relaunches.
+          const exePath = app.getPath('exe');
+          const appBundlePath = path.dirname(path.dirname(path.dirname(exePath)));
+          const installDir = path.dirname(appBundlePath);
+          const zipPath = updateDownloadedFilePath;
+          const pid = process.pid;
+          console.log('[Verba updater] macOS manual update: zip=%s installDir=%s', zipPath, installDir);
+          const scriptContent = [
+            '#!/bin/bash',
+            `while kill -0 ${pid} 2>/dev/null; do sleep 0.1; done`,
+            `ditto -x -k -- '${zipPath.replace(/'/g, "'\\''")}' '${installDir.replace(/'/g, "'\\''")}'`,
+            `open -n '${appBundlePath.replace(/'/g, "'\\''")}'`,
+          ].join('\n');
+          const scriptPath = path.join(os.tmpdir(), 'verba-update.sh');
+          fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+          spawn('bash', [scriptPath], { detached: true, stdio: 'ignore' }).unref();
+          console.log('[Verba updater] update script spawned, calling app.exit(0)');
+          app.exit(0);
+        } else {
+          console.log('[Verba updater] calling quitAndInstall()');
+          autoUpdater.quitAndInstall(false, true);
+        }
+      } catch (err) {
+        console.error('[Verba updater] install-update error:', err.message, err.stack);
+      }
+    });
+    return Promise.resolve();
   });
+
+  ipcMain.handle('get_update_ready', () => updateDownloadedInfo);
 
   // Window drag
   ipcMain.on('window-drag-start', (_, { offsetX, offsetY }) => {
@@ -763,7 +778,6 @@ app.whenReady().then(() => {
   hotkeyRegistered = registerHotkey();
 
   mainWindow.webContents.on('did-finish-load', () => {
-    if (!store.getLicenseStatus()) createDashboardWindow();
     if (process.platform === 'darwin') {
       const mic = systemPreferences.getMediaAccessStatus('microphone');
       const accessibility = systemPreferences.isTrustedAccessibilityClient(false);
@@ -813,7 +827,9 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[Verba updater] Update downloaded:', info.version, '— will install on next quit');
+    console.log('[Verba updater] Update downloaded:', info.version, '— zip path:', info.downloadedFile);
+    updateDownloadedInfo = { version: info.version };
+    updateDownloadedFilePath = info.downloadedFile || null;
     sendUpdateStatus('update-downloaded', { version: info.version });
   });
 

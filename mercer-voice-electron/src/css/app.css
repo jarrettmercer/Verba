@@ -244,78 +244,7 @@
     pointer-events: none;
 }
 
-.license-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: var(--pill-bg, rgba(28, 28, 30, 0.92));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-.license-box {
-    width: 100%;
-    max-width: 320px;
-    text-align: center;
-}
-.license-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--colors--white, #fff);
-    margin: 0 0 8px;
-    letter-spacing: 0.02em;
-}
-.license-hint {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-    margin: 0 0 16px;
-    line-height: 1.4;
-}
-.license-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
-    font-size: 14px;
-    letter-spacing: 0.08em;
-    font-family: inherit;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    margin-bottom: 8px;
-}
-.license-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-}
-.license-input:focus {
-    outline: none;
-    border-color: var(--colors--primary, #a78bfa);
-}
-.license-error {
-    font-size: 12px;
-    color: var(--color-error, #f87171);
-    min-height: 18px;
-    margin: 0 0 12px;
-}
-.license-btn {
-    padding: 10px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #fff;
-    background: var(--colors--primary, #a78bfa);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-.license-btn:hover {
-    filter: brightness(1.1);
-}
-.license-btn:active {
-    filter: brightness(0.95);
-}
+
 
 .api-error-overlay {
     position: fixed;

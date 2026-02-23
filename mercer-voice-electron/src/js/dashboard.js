@@ -772,9 +772,10 @@ listen('update-download-progress', (event) => {
     if (updateProgressFill) updateProgressFill.style.width = `${pct}%`;
 });
 
-listen('update-downloaded', (event) => {
-    const version = event.payload && event.payload.version;
-    // Hide progress bar, show banner
+let updateReady = false;
+
+function showUpdateReadyUI(version) {
+    updateReady = true;
     if (updateProgress) updateProgress.style.display = 'none';
     setCheckUpdatesState('idle', 'Restart to update');
     if (updateBannerText) {
@@ -783,16 +784,35 @@ listen('update-downloaded', (event) => {
             : 'A new version of Verba is ready to install.';
     }
     if (updateBanner) updateBanner.style.display = 'flex';
-    // Repurpose the check-updates button to trigger install
-    if (btnCheckUpdates) {
-        btnCheckUpdates.onclick = () => invoke('install-update').catch(console.error);
-    }
+}
+
+listen('update-downloaded', (event) => {
+    const version = event.payload && event.payload.version;
+    console.log('[Verba updater] update-downloaded event received, version:', version);
+    showUpdateReadyUI(version);
 });
+
+invoke('get_update_ready').then((info) => {
+    if (info && info.version) {
+        console.log('[Verba updater] update already ready on dashboard open, version:', info.version);
+        showUpdateReadyUI(info.version);
+    }
+}).catch(() => {});
+
+function triggerInstallUpdate() {
+    console.log('[Verba updater] Restart to update clicked — invoking install-update');
+    invoke('install-update')
+        .then(() => console.log('[Verba updater] install-update IPC resolved'))
+        .catch((err) => console.error('[Verba updater] install-update IPC rejected:', err));
+}
 
 if (btnCheckUpdates) {
     btnCheckUpdates.addEventListener('click', () => {
+        if (updateReady) {
+            triggerInstallUpdate();
+            return;
+        }
         setCheckUpdatesState('busy', 'Checking…');
-        // Safety timeout — reset if no event fires within 15 seconds
         clearCheckTimer();
         checkUpdateTimer = setTimeout(() => {
             if (btnCheckUpdates.disabled) {
@@ -807,11 +827,7 @@ if (btnCheckUpdates) {
 }
 
 if (btnRestartUpdate) {
-    btnRestartUpdate.addEventListener('click', () => {
-        invoke('install-update').catch((err) => {
-            console.error('Failed to install update:', err);
-        });
-    });
+    btnRestartUpdate.addEventListener('click', () => triggerInstallUpdate());
 }
 
 // ===== PLATFORM-SPECIFIC UI =====
@@ -843,84 +859,7 @@ async function initDashboard() {
     ]);
 }
 
-// ===== LICENSE GATE (dashboard is used for activation at same size as dashboard) =====
-const licenseScreen = document.getElementById('license-screen');
-const licenseContent = document.getElementById('dashboard-content');
-
-/** Format license key as user types: VERBA-XXXX-XXXX-XXXX-XXXX (uppercase, alphanumeric only). */
-function formatLicenseKeyInput(inputEl) {
-    if (!inputEl) return;
-    const raw = inputEl.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 21);
-    const parts = [];
-    parts.push(raw.slice(0, 5));   // VERBA
-    parts.push(raw.slice(5, 9));   // XXXX
-    parts.push(raw.slice(9, 13));
-    parts.push(raw.slice(13, 17));
-    parts.push(raw.slice(17, 21));
-    const formatted = parts.filter(Boolean).join('-');
-    const contentBefore = inputEl.value.slice(0, inputEl.selectionStart).replace(/[^A-Za-z0-9]/g, '').length;
-
-    inputEl.value = formatted;
-
-    let newPos = 0;
-    let count = 0;
-    for (let i = 0; i < formatted.length && count < contentBefore; i++) {
-        newPos = i + 1;
-        if (formatted[i] !== '-') count++;
-    }
-    inputEl.setSelectionRange(newPos, newPos);
-}
-
-// Attach formatter once so it works on first load and after Deactivate
-const licenseKeyInputEl = document.getElementById('license-key-input');
-if (licenseKeyInputEl) {
-    licenseKeyInputEl.addEventListener('input', function () {
-        formatLicenseKeyInput(licenseKeyInputEl);
-    });
-}
-
-async function checkLicenseAndInit() {
-    try {
-        const licensed = await invoke('get_license_status');
-        if (licensed) {
-            if (licenseScreen) licenseScreen.style.display = 'none';
-            if (licenseContent) licenseContent.style.display = 'flex';
-            await initDashboard();
-        } else {
-            if (licenseScreen) licenseScreen.style.display = 'flex';
-            if (licenseContent) licenseContent.style.display = 'none';
-            const input = document.getElementById('license-key-input');
-            const btn = document.getElementById('license-activate-btn');
-            const errEl = document.getElementById('license-error');
-            async function doActivate() {
-                const key = (input && input.value) ? input.value.trim() : '';
-                if (errEl) errEl.textContent = '';
-                if (!key) {
-                    if (errEl) errEl.textContent = 'Please enter a product key.';
-                    return;
-                }
-                try {
-                    await invoke('activate_license', { key });
-                    if (licenseScreen) licenseScreen.style.display = 'none';
-                    if (licenseContent) licenseContent.style.display = 'flex';
-                    await initDashboard();
-                } catch (e) {
-                    if (errEl) errEl.textContent = (e && (e.message || String(e))) || 'Invalid key.';
-                }
-            }
-            if (btn) btn.addEventListener('click', doActivate);
-            if (input) {
-                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doActivate(); });
-                input.focus();
-            }
-        }
-    } catch (_) {
-        if (licenseScreen) licenseScreen.style.display = 'flex';
-        if (licenseContent) licenseContent.style.display = 'none';
-    }
-}
-
-// Reset license / Deactivate — show license screen again (Settings → About)
+// ===== PERMISSION BUTTONS =====
 const btnOpenAccessibility = document.getElementById('btn-open-accessibility');
 if (btnOpenAccessibility) {
     btnOpenAccessibility.addEventListener('click', () => {
@@ -942,7 +881,6 @@ if (btnRequestMicrophone) {
                 btnRequestMicrophone.textContent = 'Access granted';
                 setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 3000);
             } else if (isWindows && result && result.error) {
-                // Windows: settings page was opened, show helpful message
                 btnRequestMicrophone.textContent = 'Settings opened — enable mic, then retry';
                 setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 8000);
             } else {
@@ -956,23 +894,6 @@ if (btnRequestMicrophone) {
         }
     });
 }
-const btnDeactivateLicense = document.getElementById('btn-deactivate-license');
-if (btnDeactivateLicense) {
-    btnDeactivateLicense.addEventListener('click', async () => {
-        try {
-            await invoke('deactivate_license');
-            if (licenseScreen) licenseScreen.style.display = 'flex';
-            if (licenseContent) licenseContent.style.display = 'none';
-            const input = document.getElementById('license-key-input');
-            if (input) {
-                input.value = '';
-                input.focus();
-            }
-        } catch (e) {
-            console.error('Deactivate failed', e);
-        }
-    });
-}
 
 // ===== APP VERSION =====
 invoke('get_app_version').then(version => {
@@ -983,7 +904,7 @@ invoke('get_app_version').then(version => {
 }).catch(() => {});
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkLicenseAndInit);
+    document.addEventListener('DOMContentLoaded', initDashboard);
 } else {
-    checkLicenseAndInit();
+    initDashboard();
 }

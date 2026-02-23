@@ -1,16 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-function validateLicenseKey(key) {
-  const k = String(key).trim().toUpperCase();
-  if (!k) throw new Error('Please enter a product key');
-  const parts = k.split('-');
-  if (parts.length !== 5 || parts[0] !== 'VERBA') throw new Error('Invalid format. Use VERBA-XXXX-XXXX-XXXX-XXXX');
-  for (let i = 1; i < parts.length; i++) {
-    if (parts[i].length !== 4 || !/^[A-Z0-9]+$/.test(parts[i])) throw new Error('Invalid format. Use VERBA-XXXX-XXXX-XXXX-XXXX');
-  }
-}
-
 function modelFilenameForSize(size) {
   switch (String(size).toLowerCase()) {
     case 'small': return 'ggml-small.en.bin';
@@ -64,29 +54,6 @@ class Store {
     } catch (e) {
       console.error('[Store] save failed', e);
     }
-  }
-
-  getLicenseStatus() {
-    const licensePath = path.join(this.appDataDir, 'license.json');
-    if (!fs.existsSync(licensePath)) return false;
-    try {
-      JSON.parse(fs.readFileSync(licensePath, 'utf8'));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  activateLicense(key) {
-    validateLicenseKey(key);
-    const licensePath = path.join(this.appDataDir, 'license.json');
-    const data = { activated_at: Math.floor(Date.now() / 1000) };
-    fs.writeFileSync(licensePath, JSON.stringify(data, null, 2));
-  }
-
-  deactivateLicense() {
-    const licensePath = path.join(this.appDataDir, 'license.json');
-    if (fs.existsSync(licensePath)) fs.unlinkSync(licensePath);
   }
 
   getStats() {
