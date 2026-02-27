@@ -276,8 +276,18 @@
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
+                            <div class="setting-name">Remote Desktop Mode</div>
+                            <div class="setting-description">Type text keystroke-by-keystroke instead of pasting from clipboard. Enable this when using Verba while connected to a remote machine via RDP, VNC, or similar.</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-remote-desktop" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row" id="row-paste-delay">
+                        <div class="setting-info">
                             <div class="setting-name">Paste Delay</div>
-                            <div class="setting-description">Time to wait before sending the paste keystroke. Increase this if pasting into a Remote Desktop or virtual machine pastes stale clipboard content.</div>
+                            <div class="setting-description">Time to wait before sending the paste keystroke.</div>
                         </div>
                         <div class="paste-delay-control">
                             <input type="range" id="setting-paste-delay" min="100" max="2000" step="50" value="200" class="setting-range" />

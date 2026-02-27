@@ -7,9 +7,10 @@ function pasteText(text, targetBundleId, opts = {}) {
   const t = typeof text === 'string' ? text.trim() : '';
   if (!t) return Promise.resolve();
 
-  const delayMs = typeof opts.delayMs === 'number' && opts.delayMs >= 0 ? opts.delayMs : 200;
+  const useKeystroke = opts.useKeystroke === true;
+  const delayMs = useKeystroke ? 200 : (typeof opts.delayMs === 'number' && opts.delayMs >= 0 ? opts.delayMs : 200);
 
-  console.log('[Verba] Paste: setting clipboard (' + t.length + ' chars, delay=' + delayMs + 'ms)');
+  console.log('[Verba] Paste: setting clipboard (' + t.length + ' chars, delay=' + delayMs + 'ms, keystroke=' + useKeystroke + ')');
   clipboard.writeText(t);
 
   const bid = targetBundleId && typeof targetBundleId === 'string' ? targetBundleId.trim() : null;
@@ -22,7 +23,6 @@ function pasteText(text, targetBundleId, opts = {}) {
   }
 
   if (process.platform === 'darwin') {
-    // Activate the target app (bring it to front)
     console.log('[Verba] Paste: activating app', bid);
     try {
       const activateScript = `tell application "System Events" to set frontmost of first process whose bundle identifier is "${bid.replace(/"/g, '\\"')}" to true`;
@@ -33,15 +33,34 @@ function pasteText(text, targetBundleId, opts = {}) {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        console.log('[Verba] Paste: sending Cmd+V');
-        exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, { timeout: 3000 }, (error) => {
-          if (error) {
-            console.warn('[Verba] Paste: keystroke failed (grant Accessibility?)', error.message);
-          } else {
-            console.log('[Verba] Paste: Cmd+V sent');
-          }
-          resolve();
-        });
+        if (useKeystroke) {
+          // Type text keystroke-by-keystroke via the clipboard contents.
+          // Bypasses RDP/VNC clipboard sync — each character is forwarded
+          // to the remote session as a keyboard event.
+          console.log('[Verba] Paste: typing via keystroke (Remote Desktop mode)');
+          exec(
+            `osascript -e 'tell application "System Events" to keystroke (the clipboard as text)'`,
+            { timeout: 30000 },
+            (error) => {
+              if (error) {
+                console.warn('[Verba] Paste: keystroke typing failed', error.message);
+              } else {
+                console.log('[Verba] Paste: text typed via keystroke');
+              }
+              resolve();
+            }
+          );
+        } else {
+          console.log('[Verba] Paste: sending Cmd+V');
+          exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, { timeout: 3000 }, (error) => {
+            if (error) {
+              console.warn('[Verba] Paste: keystroke failed (grant Accessibility?)', error.message);
+            } else {
+              console.log('[Verba] Paste: Cmd+V sent');
+            }
+            resolve();
+          });
+        }
       }, delayMs);
     });
   }

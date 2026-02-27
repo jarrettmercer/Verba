@@ -283,11 +283,19 @@ const settingAutoPaste = document.getElementById('setting-auto-paste');
 const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
 const settingHidePill = document.getElementById('setting-hide-pill');
 const rowHidePill = document.getElementById('row-hide-pill');
+const settingRemoteDesktop = document.getElementById('setting-remote-desktop');
 const settingPasteDelay = document.getElementById('setting-paste-delay');
 const pasteDelayValue = document.getElementById('paste-delay-value');
+const rowPasteDelay = document.getElementById('row-paste-delay');
 
 // Show the hide-pill option on Windows only
 if (isWindows && rowHidePill) rowHidePill.style.display = '';
+
+function updatePasteDelayVisibility() {
+    if (rowPasteDelay) {
+        rowPasteDelay.style.display = settingRemoteDesktop && settingRemoteDesktop.checked ? 'none' : '';
+    }
+}
 
 async function loadSettings() {
     try {
@@ -296,6 +304,10 @@ async function loadSettings() {
         settingAutoPaste.checked = settings.auto_paste !== false;
         settingLaunchAtLogin.checked = settings.launch_at_login === true;
         if (settingHidePill) settingHidePill.checked = settings.hide_pill === true;
+        if (settingRemoteDesktop) {
+            settingRemoteDesktop.checked = settings.remote_desktop_mode === true;
+            updatePasteDelayVisibility();
+        }
         if (settingPasteDelay) {
             const delay = typeof settings.paste_delay_ms === 'number' ? settings.paste_delay_ms : 200;
             settingPasteDelay.value = delay;
@@ -341,6 +353,13 @@ settingLaunchAtLogin.addEventListener('change', () => {
 if (settingHidePill) {
     settingHidePill.addEventListener('change', () => {
         invoke('update_setting', { key: 'hide_pill', value: settingHidePill.checked }).catch(console.error);
+    });
+}
+
+if (settingRemoteDesktop) {
+    settingRemoteDesktop.addEventListener('change', () => {
+        invoke('update_setting', { key: 'remote_desktop_mode', value: settingRemoteDesktop.checked }).catch(console.error);
+        updatePasteDelayVisibility();
     });
 }
 

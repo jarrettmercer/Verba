@@ -111,7 +111,7 @@ class Store {
   }
 
   updateSetting(key, value) {
-    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill', 'paste_delay_ms'];
+    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill', 'paste_delay_ms', 'remote_desktop_mode'];
     if (this.data.settings[key] !== undefined || allowed.includes(key)) this.data.settings[key] = value;
     this.save();
   }

@@ -486,8 +486,10 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('paste_text', async (_, { text, targetBundleId }) => {
-    const delayMs = store.getSettings().paste_delay_ms;
-    return pasteText(text, targetBundleId, { delayMs: typeof delayMs === 'number' ? delayMs : 200 });
+    const settings = store.getSettings();
+    const delayMs = typeof settings.paste_delay_ms === 'number' ? settings.paste_delay_ms : 200;
+    const useKeystroke = settings.remote_desktop_mode === true;
+    return pasteText(text, targetBundleId, { delayMs, useKeystroke });
   });
 
   // Navigation
