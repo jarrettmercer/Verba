@@ -486,7 +486,8 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('paste_text', async (_, { text, targetBundleId }) => {
-    return pasteText(text, targetBundleId);
+    const delayMs = store.getSettings().paste_delay_ms;
+    return pasteText(text, targetBundleId, { delayMs: typeof delayMs === 'number' ? delayMs : 200 });
   });
 
   // Navigation

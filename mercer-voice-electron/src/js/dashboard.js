@@ -283,6 +283,8 @@ const settingAutoPaste = document.getElementById('setting-auto-paste');
 const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
 const settingHidePill = document.getElementById('setting-hide-pill');
 const rowHidePill = document.getElementById('row-hide-pill');
+const settingPasteDelay = document.getElementById('setting-paste-delay');
+const pasteDelayValue = document.getElementById('paste-delay-value');
 
 // Show the hide-pill option on Windows only
 if (isWindows && rowHidePill) rowHidePill.style.display = '';
@@ -294,6 +296,11 @@ async function loadSettings() {
         settingAutoPaste.checked = settings.auto_paste !== false;
         settingLaunchAtLogin.checked = settings.launch_at_login === true;
         if (settingHidePill) settingHidePill.checked = settings.hide_pill === true;
+        if (settingPasteDelay) {
+            const delay = typeof settings.paste_delay_ms === 'number' ? settings.paste_delay_ms : 200;
+            settingPasteDelay.value = delay;
+            if (pasteDelayValue) pasteDelayValue.textContent = delay + ' ms';
+        }
     } catch (_) {
         // Defaults
     }
@@ -334,6 +341,15 @@ settingLaunchAtLogin.addEventListener('change', () => {
 if (settingHidePill) {
     settingHidePill.addEventListener('change', () => {
         invoke('update_setting', { key: 'hide_pill', value: settingHidePill.checked }).catch(console.error);
+    });
+}
+
+if (settingPasteDelay) {
+    settingPasteDelay.addEventListener('input', () => {
+        if (pasteDelayValue) pasteDelayValue.textContent = settingPasteDelay.value + ' ms';
+    });
+    settingPasteDelay.addEventListener('change', () => {
+        invoke('update_setting', { key: 'paste_delay_ms', value: Number(settingPasteDelay.value) }).catch(console.error);
     });
 }
 

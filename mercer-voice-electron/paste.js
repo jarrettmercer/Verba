@@ -3,11 +3,13 @@ const { execSync, exec } = require('child_process');
 
 const VERBA_BUNDLE_ID = 'com.mercer.verba';
 
-function pasteText(text, targetBundleId) {
+function pasteText(text, targetBundleId, opts = {}) {
   const t = typeof text === 'string' ? text.trim() : '';
   if (!t) return Promise.resolve();
 
-  console.log('[Verba] Paste: setting clipboard (' + t.length + ' chars)');
+  const delayMs = typeof opts.delayMs === 'number' && opts.delayMs >= 0 ? opts.delayMs : 200;
+
+  console.log('[Verba] Paste: setting clipboard (' + t.length + ' chars, delay=' + delayMs + 'ms)');
   clipboard.writeText(t);
 
   const bid = targetBundleId && typeof targetBundleId === 'string' ? targetBundleId.trim() : null;
@@ -29,7 +31,6 @@ function pasteText(text, targetBundleId) {
       console.warn('[Verba] Paste: activate failed', e.message);
     }
 
-    // Brief delay for the app to become frontmost, then send Cmd+V
     return new Promise((resolve) => {
       setTimeout(() => {
         console.log('[Verba] Paste: sending Cmd+V');
@@ -41,12 +42,11 @@ function pasteText(text, targetBundleId) {
           }
           resolve();
         });
-      }, 200);
+      }, delayMs);
     });
   }
 
   if (process.platform === 'win32') {
-    // On Windows, send Ctrl+V using PowerShell and .NET SendKeys
     return new Promise((resolve) => {
       setTimeout(() => {
         console.log('[Verba] Paste: sending Ctrl+V on Windows');
@@ -62,7 +62,7 @@ function pasteText(text, targetBundleId) {
             resolve();
           }
         );
-      }, 200);
+      }, delayMs);
     });
   }
 
