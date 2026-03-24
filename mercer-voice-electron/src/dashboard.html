@@ -21,11 +21,10 @@
                 <li>
                     <button class="nav-btn active" data-tab="stats">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="12" width="4" height="9" rx="1"/>
-                            <rect x="10" y="7" width="4" height="14" rx="1"/>
-                            <rect x="17" y="3" width="4" height="18" rx="1"/>
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
                         </svg>
-                        <span>Stats</span>
+                        <span>Home</span>
                     </button>
                 </li>
                 <li>
@@ -48,22 +47,16 @@
                         <span>History</span>
                     </button>
                 </li>
-                <li>
-                    <button class="nav-btn" data-tab="settings">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"/>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                        </svg>
-                        <span>Settings</span>
-                    </button>
-                </li>
             </ul>
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-top">
+
+            <!-- Info / update card -->
+            <div class="sidebar-info-card">
+                <div class="sidebar-info-header">
+                    <span class="sidebar-info-name">Verba</span>
                     <span class="version-label" id="sidebar-version">v—</span>
-                    <button type="button" class="btn-check-updates" id="btn-check-updates">Check for updates</button>
                 </div>
-                <!-- Download progress (hidden until an update is downloading) -->
+                <p class="sidebar-info-desc">Keep Verba up to date for the best experience.</p>
+                <button type="button" class="sidebar-info-btn" id="btn-check-updates">Check for updates</button>
                 <div class="update-progress" id="update-progress" style="display:none;">
                     <div class="update-progress-label">
                         <span id="update-progress-text">Downloading update…</span>
@@ -74,6 +67,19 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Footer nav -->
+            <ul class="sidebar-footer-nav">
+                <li>
+                    <button class="nav-btn" data-tab="settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        <span>Settings</span>
+                    </button>
+                </li>
+            </ul>
         </nav>
 
         <!-- Main content area -->
@@ -92,63 +98,73 @@
                 <button type="button" class="btn btn-primary btn-sm" id="btn-restart-update">Restart to update</button>
             </div>
 
-            <!-- ===== STATS TAB ===== -->
+            <!-- ===== HOME TAB ===== -->
             <section id="tab-stats" class="tab-panel active">
-                <div class="tab-header">
-                    <h1>Statistics</h1>
-                    <p class="tab-subtitle">Your voice dictation at a glance</p>
-                </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon purple">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                            </svg>
-                        </div>
-                        <div class="stat-value" id="stat-dictations">0</div>
-                        <div class="stat-label">Total Dictations</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon blue">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-                            </svg>
-                        </div>
-                        <div class="stat-value" id="stat-words">0</div>
-                        <div class="stat-label">Words Dictated</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon green">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polyline points="12 6 12 12 16 14"/>
-                            </svg>
-                        </div>
-                        <div class="stat-value" id="stat-time-saved">0m</div>
-                        <div class="stat-label">Time Saved</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon orange">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                                <polyline points="17 6 23 6 23 12"/>
-                            </svg>
-                        </div>
-                        <div class="stat-value" id="stat-avg-length">0</div>
-                        <div class="stat-label">Avg Words / Dictation</div>
+                <!-- Welcome header -->
+                <div class="home-header">
+                    <h1 class="home-welcome">Welcome back</h1>
+                    <div class="home-chips">
+                        <span class="home-chip">
+                            <span class="home-chip-icon">🎙️</span>
+                            <strong id="stat-dictations">0</strong>
+                            <span>sessions</span>
+                        </span>
+                        <span class="home-chip">
+                            <span class="home-chip-icon">✍️</span>
+                            <strong id="stat-words">0</strong>
+                            <span>words</span>
+                        </span>
+                        <span class="home-chip">
+                            <span class="home-chip-icon">⏱️</span>
+                            <strong id="stat-time-saved">0m</strong>
+                            <span>saved</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="stat-card wide">
-                    <h3>Recent Activity</h3>
-                    <div id="recent-activity" class="recent-activity-list">
+                <!-- Daily goal card -->
+                <div class="home-goal-card">
+                    <div class="home-goal-body">
+                        <div class="home-goal-title">Daily Dictation Goal</div>
+                        <div class="home-goal-sub">Dictate 100 words today to build the habit</div>
+                        <div class="home-goal-bar-wrap">
+                            <div class="home-goal-bar-track">
+                                <div class="home-goal-bar-fill" id="goal-bar-fill" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div class="home-goal-count" id="home-goal-count">0/100 WORDS</div>
+                    </div>
+                    <div class="home-goal-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Feature card -->
+                <div class="home-feature-card">
+                    <div class="home-feature-body">
+                        <h2 class="home-feature-title">Tip &rarr; Use Verba in any app</h2>
+                        <p class="home-feature-desc">Verba works wherever you type. Press your hotkey to dictate into emails, browsers, documents, and more &mdash; all hands-free.</p>
+                        <button type="button" class="home-feature-btn" id="btn-feature-hotkey">Configure your hotkey</button>
+                    </div>
+                </div>
+
+                <!-- Hidden for JS compat -->
+                <span id="stat-avg-length" style="display:none">0</span>
+
+                <!-- Today section -->
+                <div class="home-today">
+                    <div class="home-today-label">TODAY</div>
+                    <div id="recent-activity" class="home-today-list">
                         <div class="empty-state">No dictations yet. Start talking!</div>
                     </div>
                 </div>
+
             </section>
 
             <!-- ===== DICTIONARY TAB ===== -->

@@ -112,6 +112,7 @@ function createDashboardWindow() {
       nodeIntegration: false,
     },
   });
+  if (process.platform !== 'darwin') dashboardWindow.removeMenu();
   dashboardWindow.loadFile(path.resolve(__dirname, 'src', 'dashboard.html'));
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
 }

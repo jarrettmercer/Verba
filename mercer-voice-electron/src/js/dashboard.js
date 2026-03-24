@@ -48,6 +48,16 @@ function renderRecentActivity(history) {
     const container = document.getElementById('recent-activity');
     const recent = history.slice(-8).reverse();
 
+    // Update daily goal progress
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayWords = history
+        .filter(e => e.timestamp && new Date(e.timestamp) >= todayStart)
+        .reduce((sum, e) => sum + e.text.split(/\s+/).filter(w => w.length > 0).length, 0);
+    const goalEl = document.getElementById('home-goal-count');
+    const barEl = document.getElementById('goal-bar-fill');
+    if (goalEl) goalEl.textContent = `${todayWords}/100 WORDS`;
+    if (barEl) barEl.style.width = Math.min(100, (todayWords / 100) * 100) + '%';
+
     if (recent.length === 0) {
         container.innerHTML = '<div class="empty-state">No dictations yet. Start talking!</div>';
         return;
@@ -938,6 +948,19 @@ if (btnRequestMicrophone) {
             btnRequestMicrophone.textContent = 'Failed — try Open Microphone Settings';
             setTimeout(() => { btnRequestMicrophone.textContent = 'Request access'; }, 4000);
         }
+    });
+}
+
+// ===== FEATURE CARD HOTKEY BUTTON =====
+const btnFeatureHotkey = document.getElementById('btn-feature-hotkey');
+if (btnFeatureHotkey) {
+    btnFeatureHotkey.addEventListener('click', () => {
+        navButtons.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        const settingsBtn = document.querySelector('.nav-btn[data-tab="settings"]');
+        if (settingsBtn) settingsBtn.classList.add('active');
+        const settingsPanel = document.getElementById('tab-settings');
+        if (settingsPanel) settingsPanel.classList.add('active');
     });
 }
 
