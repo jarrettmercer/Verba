@@ -20,6 +20,7 @@
     "appId": "com.mercer.verba",
     "productName": "Verba",
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",

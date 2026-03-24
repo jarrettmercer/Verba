@@ -29,6 +29,15 @@ function getAssetPath(...p) {
   return path.join(__dirname, 'src', ...p);
 }
 
+function getAppIcon() {
+  const candidates = process.platform === 'win32'
+    ? [path.join(__dirname, 'build', 'icon.ico'), path.join(__dirname, 'src', 'icon.png')]
+    : process.platform === 'darwin'
+    ? [path.join(__dirname, 'build', 'icon.icns'), path.join(__dirname, 'src', 'icon.png')]
+    : [path.join(__dirname, 'src', 'icon.png')];
+  return candidates.find(p => fs.existsSync(p));
+}
+
 /**
  * Return the display area and margin for pill positioning.
  * On Windows, use workArea (excludes the taskbar) so the pill sits above it.
@@ -49,8 +58,6 @@ function createMainWindow() {
   if (!fs.existsSync(indexPath)) console.error('[Verba] index.html not found at', indexPath);
   if (!fs.existsSync(preloadPath)) console.error('[Verba] preload.js not found at', preloadPath);
 
-  const iconPath = path.join(__dirname, 'build', 'icon.png');
-
   const win = new BrowserWindow({
     width: 145,
     height: 36,
@@ -61,7 +68,7 @@ function createMainWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    icon: getAppIcon(),
     ...(process.platform === 'win32' ? { backgroundColor: '#00000000', thickFrame: false } : {}),
     webPreferences: {
       preload: preloadPath,
@@ -93,13 +100,12 @@ function createDashboardWindow() {
     dashboardWindow.focus();
     return;
   }
-  const iconPath = path.join(__dirname, 'build', 'icon.png');
   dashboardWindow = new BrowserWindow({
     width: 880,
     height: 620,
     minWidth: 640,
     minHeight: 480,
-    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    icon: getAppIcon(),
     webPreferences: {
       preload: path.resolve(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -116,6 +122,7 @@ function createSetupWindow() {
   setupWindow = new BrowserWindow({
     width: 500, height: 480, resizable: false, center: true,
     alwaysOnTop: false,
+    icon: getAppIcon(),
     webPreferences: {
       preload: path.resolve(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -730,6 +737,11 @@ function registerIpcHandlers() {
   });
 }
 
+// Required on Windows for taskbar icon and notifications to work correctly
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.mercer.verba');
+}
+
 app.whenReady().then(() => {
   console.log('[Verba] Starting — app path:', __dirname);
   console.log('[Verba] Electron binary:', ELECTRON_BINARY);
@@ -738,10 +750,8 @@ app.whenReady().then(() => {
 
   // Set dock icon on macOS
   if (process.platform === 'darwin' && app.dock) {
-    const dockIconPath = path.join(__dirname, 'build', 'icon.png');
-    if (fs.existsSync(dockIconPath)) {
-      app.dock.setIcon(dockIconPath);
-    }
+    const dockIcon = getAppIcon();
+    if (dockIcon) app.dock.setIcon(dockIcon);
   }
 
   // Set explicit application menu so macOS menu bar shows "Verba"
