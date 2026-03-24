@@ -45,6 +45,10 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Upscale icon to 512x512 for macOS build
+        if: runner.os == 'macOS'
+        run: sips -z 512 512 build/icon.png --out build/icon.png
+
       - name: Build & Publish Release
         run: ${{ matrix.release_cmd }}
         env:
