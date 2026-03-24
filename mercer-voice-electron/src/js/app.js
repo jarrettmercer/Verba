@@ -77,7 +77,7 @@ function playSound(samples) {
         source.connect(gain);
         gain.connect(ctx.destination);
         source.onended = () => ctx.close().catch(() => {});
-        source.start();
+        ctx.resume().then(() => source.start()).catch(() => {});
     } catch (_) {}
 }
 
