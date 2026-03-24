@@ -595,6 +595,12 @@ function registerIpcHandlers() {
   ipcMain.handle('get_settings', () => store.getSettings());
   ipcMain.handle('update_setting', (_, { key, value }) => {
     store.updateSetting(key, value);
+    // Forward theme changes to the pill window immediately
+    if (key === 'theme_mode') {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('theme-changed', value);
+      }
+    }
     // React to hide_pill toggle immediately
     if (key === 'hide_pill') {
       if (value && process.platform === 'win32') {

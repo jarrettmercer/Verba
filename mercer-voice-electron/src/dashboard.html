@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verba — Dashboard</title>
-    <style>html, body { background: #0a0a0a; color: #fafafa; }</style>
+    <script>(function(){var t=localStorage.getItem('verba-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/dashboard.css" />
 </head>
@@ -244,6 +244,16 @@
 
                 <div class="settings-section">
                     <h3>General</h3>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-name">Appearance</div>
+                            <div class="setting-description">Choose between dark and light mode</div>
+                        </div>
+                        <select id="setting-theme" class="setting-input setting-select" style="max-width:140px;">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-name">Sound Effects</div>

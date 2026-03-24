@@ -31,6 +31,7 @@ class Store {
         hotkey_accelerator: process.platform === 'darwin' ? 'Command+Shift+Space' : 'Control+Shift+Space',
         api_config: { endpoint: '', api_key: '' },
         transcription: { source: 'local', local_model_path: '', local_model_size: 'small' },
+        theme_mode: 'dark',
       },
     };
     try {
@@ -111,7 +112,7 @@ class Store {
   }
 
   updateSetting(key, value) {
-    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill', 'paste_delay_ms', 'remote_desktop_mode'];
+    const allowed = ['sounds_enabled', 'auto_paste', 'launch_at_login', 'hotkey_accelerator', 'hide_pill', 'paste_delay_ms', 'remote_desktop_mode', 'theme_mode'];
     if (this.data.settings[key] !== undefined || allowed.includes(key)) this.data.settings[key] = value;
     this.save();
   }

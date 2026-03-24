@@ -192,7 +192,17 @@ function init() {
 
     invoke('get_settings').then((s) => {
         if (s && typeof s.sounds_enabled === 'boolean') soundsEnabled = s.sounds_enabled;
+        if (s && s.theme_mode) {
+            document.documentElement.setAttribute('data-theme', s.theme_mode);
+            localStorage.setItem('verba-theme', s.theme_mode);
+        }
     }).catch(() => {});
+
+    listen('theme-changed', (event) => {
+        const theme = event.payload || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('verba-theme', theme);
+    });
 
     const peelBtn = document.getElementById('peel-btn');
     if (peelBtn) {

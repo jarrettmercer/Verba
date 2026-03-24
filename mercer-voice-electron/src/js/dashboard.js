@@ -278,6 +278,7 @@ window.copyHistoryText = async function(index) {
 };
 
 // ===== SETTINGS =====
+const settingTheme = document.getElementById('setting-theme');
 const settingSounds = document.getElementById('setting-sounds');
 const settingAutoPaste = document.getElementById('setting-auto-paste');
 const settingLaunchAtLogin = document.getElementById('setting-launch-at-login');
@@ -300,6 +301,7 @@ function updatePasteDelayVisibility() {
 async function loadSettings() {
     try {
         const settings = await invoke('get_settings');
+        if (settingTheme) settingTheme.value = settings.theme_mode || 'dark';
         settingSounds.checked = settings.sounds_enabled !== false;
         settingAutoPaste.checked = settings.auto_paste !== false;
         settingLaunchAtLogin.checked = settings.launch_at_login === true;
@@ -336,6 +338,15 @@ async function loadSettings() {
             statusEl.style.color = ok ? 'var(--color-success)' : 'var(--color-error)';
         }).catch(() => { statusEl.textContent = ''; });
     }
+}
+
+if (settingTheme) {
+    settingTheme.addEventListener('change', () => {
+        const theme = settingTheme.value;
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('verba-theme', theme);
+        invoke('update_setting', { key: 'theme_mode', value: theme }).catch(console.error);
+    });
 }
 
 settingSounds.addEventListener('change', () => {

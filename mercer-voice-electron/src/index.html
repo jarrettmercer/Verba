@@ -6,6 +6,8 @@
     <title>Verba</title>
     <script>
         // Keep background transparent on all platforms for the pill overlay
+        // Apply saved theme immediately to avoid flash
+        (function(){var t=localStorage.getItem('verba-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();
     </script>
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/base.css" />

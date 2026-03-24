@@ -70,7 +70,7 @@ window.waveform = {
         const minBarHeight = Math.max(2, Math.round(2 * dpr));
         const radius = Math.round(barWidth / 2);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--pill-dot').trim() || '#ffffff';
         for (let i = 0; i < barCount; i++) {
             const level = this.displayLevels[barCount - 1 - i];
             const barHeight = Math.max(minBarHeight, Math.round(level * maxBarHeight));
