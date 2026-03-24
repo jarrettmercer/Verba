@@ -64,10 +64,19 @@ function generateTone(hz, durationMs, decayRate) {
 const beepSamples = generateTone(380, 14, 70.0);
 const boopSamples = generateTone(280, 16, 65.0);
 
+// Shared persistent context — avoids Windows suspended-on-creation and context limit issues
+let _soundCtx = null;
+function getSoundCtx() {
+    if (!_soundCtx || _soundCtx.state === 'closed') {
+        _soundCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SOUND_SAMPLE_RATE });
+    }
+    return _soundCtx;
+}
+
 function playSound(samples) {
     if (!soundsEnabled) return;
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SOUND_SAMPLE_RATE });
+        const ctx = getSoundCtx();
         const buffer = ctx.createBuffer(1, samples.length, SOUND_SAMPLE_RATE);
         buffer.copyToChannel(samples, 0);
         const source = ctx.createBufferSource();
@@ -76,7 +85,6 @@ function playSound(samples) {
         gain.gain.value = SOUND_VOLUME;
         source.connect(gain);
         gain.connect(ctx.destination);
-        source.onended = () => ctx.close().catch(() => {});
         ctx.resume().then(() => source.start()).catch(() => {});
     } catch (_) {}
 }
