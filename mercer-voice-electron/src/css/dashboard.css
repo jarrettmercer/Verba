@@ -406,64 +406,112 @@ html, body {
     background: rgba(167, 139, 250, 0.12);
 }
 
-/* Feature card */
-.home-feature-card {
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 32px;
-    background: #18141f;
-    border: 1px solid rgba(255,255,255,0.08);
-    position: relative;
+/* Home tip bar */
+.home-tip-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--colors--border);
 }
 
-[data-theme="light"] .home-feature-card {
-    background: linear-gradient(135deg, #2d1f4e 0%, #1a1030 100%);
-    border: 1px solid rgba(167, 139, 250, 0.25);
-    box-shadow: 0 4px 24px rgba(100, 60, 180, 0.18);
+.home-tip-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: rgba(167, 139, 250, 0.12);
+    color: var(--colors--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
 }
 
-.home-feature-body {
-    padding: 28px 30px;
-    position: relative;
-    z-index: 1;
+.home-tip-content {
+    flex: 1;
+    min-width: 0;
 }
 
-.home-feature-title {
-    font-size: 20px;
+.home-tip-label {
+    font-size: 10px;
     font-weight: 700;
-    color: #ffffff;
-    letter-spacing: -0.02em;
-    margin-bottom: 10px;
-    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--colors--gray);
+    margin-bottom: 1px;
 }
 
-.home-feature-desc {
-    font-size: 13px;
-    color: rgba(255,255,255,0.65);
-    line-height: 1.55;
-    max-width: 480px;
-    margin-bottom: 18px;
+.home-tip-text {
+    font-size: 12px;
+    color: var(--colors--gray-light);
+    line-height: 1.35;
 }
 
-.home-feature-btn {
+.home-tip-actions {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 18px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    color: #ffffff;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    flex-shrink: 0;
 }
 
-.home-feature-btn:hover {
-    background: rgba(255,255,255,0.20);
-    border-color: rgba(255,255,255,0.35);
+.home-tip-link,
+.home-tip-btn,
+.home-tip-dismiss {
+    border: 1px solid var(--colors--border);
+    background: transparent;
+    color: var(--colors--gray-light);
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.home-tip-link,
+.home-tip-btn {
+    padding: 6px 10px;
+}
+
+.home-tip-dismiss {
+    width: 28px;
+    height: 28px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.home-tip-link:hover,
+.home-tip-btn:hover,
+.home-tip-dismiss:hover {
+    background: var(--surface-hover);
+    color: var(--colors--white);
+    border-color: var(--colors--border-strong);
+}
+
+.home-tip-show {
+    margin-bottom: 24px;
+    border: 1px dashed var(--colors--border);
+    background: transparent;
+    color: var(--colors--gray);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.home-tip-show:hover {
+    color: var(--colors--white);
+    border-color: var(--colors--border-strong);
+    background: var(--surface-hover);
 }
 
 /* TODAY section */

@@ -145,14 +145,20 @@
                     </div>
                 </div>
 
-                <!-- Feature card -->
-                <div class="home-feature-card">
-                    <div class="home-feature-body">
-                        <h2 class="home-feature-title">Tip &rarr; Use Verba in any app</h2>
-                        <p class="home-feature-desc">Verba works wherever you type. Press your hotkey to dictate into emails, browsers, documents, and more &mdash; all hands-free.</p>
-                        <button type="button" class="home-feature-btn" id="btn-feature-hotkey">Configure your hotkey</button>
+                <!-- Tip bar -->
+                <div class="home-tip-card" id="home-tip-card">
+                    <div class="home-tip-icon" aria-hidden="true">💡</div>
+                    <div class="home-tip-content">
+                        <div class="home-tip-label">Tip</div>
+                        <p class="home-tip-text" id="home-tip-text"></p>
+                    </div>
+                    <div class="home-tip-actions">
+                        <button type="button" class="home-tip-link" id="btn-tip-next">Next tip</button>
+                        <button type="button" class="home-tip-btn" id="btn-feature-hotkey"></button>
+                        <button type="button" class="home-tip-dismiss" id="btn-tip-dismiss" aria-label="Dismiss tip">&times;</button>
                     </div>
                 </div>
+                <button type="button" class="home-tip-show" id="btn-tip-show" style="display:none;">Show tips</button>
 
                 <!-- Hidden for JS compat -->
                 <span id="stat-avg-length" style="display:none">0</span>

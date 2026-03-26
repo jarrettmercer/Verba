@@ -6,13 +6,20 @@ const isWindows = platform === 'win32';
 const navButtons = document.querySelectorAll('.nav-btn');
 const tabPanels = document.querySelectorAll('.tab-panel');
 
+function activateTab(tab) {
+    if (!tab) return;
+    const panel = document.getElementById(`tab-${tab}`);
+    if (!panel) return;
+    navButtons.forEach(b => b.classList.remove('active'));
+    tabPanels.forEach(p => p.classList.remove('active'));
+    const button = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+    if (button) button.classList.add('active');
+    panel.classList.add('active');
+}
+
 navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        navButtons.forEach(b => b.classList.remove('active'));
-        tabPanels.forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(`tab-${tab}`).classList.add('active');
+        activateTab(btn.dataset.tab);
     });
 });
 
@@ -951,17 +958,76 @@ if (btnRequestMicrophone) {
     });
 }
 
-// ===== FEATURE CARD HOTKEY BUTTON =====
+// ===== HOME TIPS =====
+const TIP_INDEX_KEY = 'verba-dashboard-tip-index';
+const TIP_DISMISSED_KEY = 'verba-dashboard-tip-dismissed';
+const homeTipCard = document.getElementById('home-tip-card');
+const homeTipText = document.getElementById('home-tip-text');
 const btnFeatureHotkey = document.getElementById('btn-feature-hotkey');
+const btnTipNext = document.getElementById('btn-tip-next');
+const btnTipDismiss = document.getElementById('btn-tip-dismiss');
+const btnTipShow = document.getElementById('btn-tip-show');
+
+const homeTips = [
+    {
+        text: 'Use Verba in any app. Press your hotkey to dictate into emails, browsers, docs, and chat.',
+        actionLabel: 'Configure hotkey',
+        actionTab: 'settings',
+    },
+    {
+        text: 'Add names and brand terms to Dictionary to improve accuracy in every dictation.',
+        actionLabel: 'Open dictionary',
+        actionTab: 'dictionary',
+    },
+    {
+        text: 'Review recent dictations from History and copy any entry back to your clipboard in one click.',
+        actionLabel: 'View history',
+        actionTab: 'history',
+    },
+];
+
+let currentTipIndex = 0;
+
+function getInitialTipIndex() {
+    const stored = Number(localStorage.getItem(TIP_INDEX_KEY));
+    if (Number.isInteger(stored) && stored >= 0) return stored % homeTips.length;
+    return Math.floor(Math.random() * homeTips.length);
+}
+
+function renderHomeTip(index) {
+    if (!homeTipCard || !homeTipText || !btnFeatureHotkey || homeTips.length === 0) return;
+    const normalized = ((index % homeTips.length) + homeTips.length) % homeTips.length;
+    const tip = homeTips[normalized];
+    currentTipIndex = normalized;
+    homeTipText.textContent = tip.text;
+    btnFeatureHotkey.textContent = tip.actionLabel;
+    localStorage.setItem(TIP_INDEX_KEY, String(normalized));
+}
+
+function setTipsDismissed(isDismissed) {
+    if (homeTipCard) homeTipCard.style.display = isDismissed ? 'none' : '';
+    if (btnTipShow) btnTipShow.style.display = isDismissed ? '' : 'none';
+    localStorage.setItem(TIP_DISMISSED_KEY, isDismissed ? '1' : '0');
+}
+
 if (btnFeatureHotkey) {
     btnFeatureHotkey.addEventListener('click', () => {
-        navButtons.forEach(b => b.classList.remove('active'));
-        tabPanels.forEach(p => p.classList.remove('active'));
-        const settingsBtn = document.querySelector('.nav-btn[data-tab="settings"]');
-        if (settingsBtn) settingsBtn.classList.add('active');
-        const settingsPanel = document.getElementById('tab-settings');
-        if (settingsPanel) settingsPanel.classList.add('active');
+        const tip = homeTips[currentTipIndex];
+        if (tip && tip.actionTab) activateTab(tip.actionTab);
     });
+}
+
+if (btnTipNext) {
+    btnTipNext.addEventListener('click', () => renderHomeTip(currentTipIndex + 1));
+}
+
+if (btnTipDismiss && homeTipCard) {
+    btnTipDismiss.addEventListener('click', () => {
+        setTipsDismissed(true);
+    });
+}
+if (btnTipShow) {
+    btnTipShow.addEventListener('click', () => setTipsDismissed(false));
 }
 
 // ===== APP VERSION =====
@@ -977,3 +1043,6 @@ if (document.readyState === 'loading') {
 } else {
     initDashboard();
 }
+
+renderHomeTip(getInitialTipIndex());
+setTipsDismissed(localStorage.getItem(TIP_DISMISSED_KEY) === '1');
